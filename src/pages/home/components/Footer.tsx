@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
 
 export default function Footer() {
@@ -40,20 +41,20 @@ export default function Footer() {
               </p>
               <ul className="space-y-2.5">
                 {[
-                  { label: "How it Works", href: "#how-it-works" },
-                  { label: "Features", href: "#features" },
-                  { label: "Demo preview", href: "#demo" },
-                  { label: "Why Different", href: "#why-different" },
-                  { label: "Early access", href: "#waitlist" },
+                  { label: "How it Works", to: "/#how-it-works" },
+                  { label: "Features", to: "/#features" },
+                  { label: "Demo preview", to: "/demo" },
+                  { label: "Why Different", to: "/#why-different" },
+                  { label: "Early access", to: "/#waitlist" },
                 ].map((link) => (
-                  <li key={link.href}>
-                    <a
-                      href={link.href}
+                  <li key={link.to}>
+                    <Link
+                      to={link.to}
                       className="text-[#8B7B6B] text-sm hover:text-[#1C1A17] transition-colors cursor-pointer"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -84,13 +85,13 @@ export default function Footer() {
           >
             &copy; 2026 AIStoryCast. All rights reserved.
           </p>
-          <a
-            href="#waitlist"
+          <Link
+            to="/#waitlist"
             className="text-[#A89880] text-xs hover:text-[#5C5346] transition-colors cursor-pointer"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
             Get Early Access
-          </a>
+          </Link>
         </div>
       </div>
     </footer>

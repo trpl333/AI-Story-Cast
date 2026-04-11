@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
 
 const voices = [
@@ -65,13 +66,23 @@ export default function DemoShowcase() {
               <span className="italic">Alice in Wonderland</span>
             </h2>
           </div>
-          <p
-            className="text-[#5C5346] text-base max-w-md leading-relaxed"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Below is a UI preview (not a live session yet): narrator + character lanes, synced scrolling copy, and a
-            passage-tied chat lane for dissecting what you just heard — modeled on Chapter I of Carroll&apos;s public-domain text.
-          </p>
+          <div className="max-w-md">
+            <p
+              className="text-[#5C5346] text-base leading-relaxed"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              Below is a UI preview (not a live session yet): narrator + character lanes, synced scrolling copy, and a
+              passage-tied chat lane for dissecting what you just heard — modeled on Chapter I of Carroll&apos;s public-domain text.
+            </p>
+            <Link
+              to="/demo"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#C4873A] hover:text-[#A66B2E]"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              Open the reader demo
+              <i className="ri-arrow-right-line" aria-hidden />
+            </Link>
+          </div>
         </div>
 
         {/* Main demo card */}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
 
 export default function Hero() {
@@ -67,20 +68,20 @@ export default function Hero() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-16">
-          <a
-            href="#demo"
+          <Link
+            to="/demo"
             className="px-8 py-3.5 bg-[#2C2416] text-[#FAF8F4] rounded-full font-semibold text-sm hover:bg-[#3D3220] transition-all duration-300 cursor-pointer whitespace-nowrap shadow-lg shadow-[#2C2416]/20"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
             Preview the Experience
-          </a>
-          <a
-            href="#waitlist"
+          </Link>
+          <Link
+            to="/#waitlist"
             className="px-8 py-3.5 bg-transparent text-[#1C1A17] rounded-full font-semibold text-sm border border-[#C4B89A] hover:bg-[#F0EBE3] transition-all duration-300 cursor-pointer whitespace-nowrap"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
             Get Early Access
-          </a>
+          </Link>
         </div>
 
         {/* Floating UI Mockup */}

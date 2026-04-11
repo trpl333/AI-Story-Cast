@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
 
 const points = [
@@ -114,20 +115,20 @@ export default function WhyDifferent() {
               </div>
 
               <div className="mt-10 flex flex-col sm:flex-row gap-3">
-                <a
-                  href="#demo"
+                <Link
+                  to="/demo"
                   className="px-6 py-3 bg-[#C4873A] text-white rounded-full text-sm font-semibold hover:bg-[#D4975A] transition-colors cursor-pointer whitespace-nowrap text-center"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   Preview the Experience
-                </a>
-                <a
-                  href="#waitlist"
+                </Link>
+                <Link
+                  to="/#waitlist"
                   className="px-6 py-3 bg-transparent text-[#C4B89A] rounded-full text-sm font-semibold border border-[#3D3220] hover:border-[#6B6355] transition-colors cursor-pointer whitespace-nowrap text-center"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   Get Early Access
-                </a>
+                </Link>
               </div>
             </div>
           </div>
