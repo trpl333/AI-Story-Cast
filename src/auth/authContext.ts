@@ -2,8 +2,8 @@ import { createContext } from "react";
 import type { AuthUser } from "./types";
 
 /**
- * App-wide session contract. `MockAuthProvider` implements this today;
- * `SupabaseAuthProvider` (future) should preserve the shape so pages keep using `useAuth`.
+ * App-wide session contract. `SupabaseAuthProvider` implements this in production;
+ * `MockAuthProvider` remains available for local-only / tests (see docs/auth-supabase-migration.md).
  */
 export type AuthContextValue = {
   user: AuthUser | null;

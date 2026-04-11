@@ -1,3 +1,7 @@
+/**
+ * Local-only mock session (localStorage). Not used in `App.tsx` once Supabase is enabled.
+ * Keep for quick UI work without a Supabase project, or swap into `App.tsx` temporarily.
+ */
 import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import type { AuthUser } from "./types";
 import { AuthContext } from "./authContext";

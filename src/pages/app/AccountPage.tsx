@@ -12,7 +12,7 @@ export default function AccountPage() {
         Profile & subscription
       </h1>
       <p className="mt-3 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-        Billing and Stripe Customer Portal will connect here. For now this page only reflects your mock session.
+        Billing and Stripe Customer Portal will connect here. Profile details come from your Supabase account.
       </p>
 
       <div className="mt-10 space-y-6">
@@ -55,7 +55,7 @@ export default function AccountPage() {
             Session
           </h2>
           <p className="mt-2 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Sign out clears the mock session in this browser (localStorage).
+            Sign out ends your Supabase session in this browser.
           </p>
           <button
             type="button"

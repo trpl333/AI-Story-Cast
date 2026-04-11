@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
+import { formatAuthError } from "@/auth/authErrors";
+import { isSupabaseConfigured } from "@/lib/supabaseClient";
 import AuthPageChrome from "./AuthPageChrome";
 
 export default function LoginPage() {
@@ -9,6 +11,8 @@ export default function LoginPage() {
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -18,7 +22,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      await signIn(email, password);
+    } catch (err) {
+      setFormError(formatAuthError(err));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -28,8 +40,30 @@ export default function LoginPage() {
           Welcome back
         </h1>
         <p className="mt-2 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Mock sign-in for the app shell — no server yet. Use any email; password is ignored.
+          Sign in with the email and password you used to register.
         </p>
+
+        {!isSupabaseConfigured() ? (
+          <div
+            className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+            role="status"
+          >
+            Supabase env vars are missing. Copy <code className="rounded bg-amber-100/80 px-1">.env.example</code> to{" "}
+            <code className="rounded bg-amber-100/80 px-1">.env.local</code> and set <code className="rounded bg-amber-100/80 px-1">VITE_SUPABASE_URL</code> and{" "}
+            <code className="rounded bg-amber-100/80 px-1">VITE_SUPABASE_ANON_KEY</code>.
+          </div>
+        ) : null}
+
+        {formError ? (
+          <p
+            className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+            role="alert"
+          >
+            {formError}
+          </p>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="mt-10 space-y-5 rounded-2xl border border-[#E0D8CC] bg-white p-8 shadow-sm">
           <div>
@@ -56,6 +90,8 @@ export default function LoginPage() {
               id="login-password"
               type="password"
               autoComplete="current-password"
+              required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-xl border border-[#E0D8CC] bg-[#FAF8F4] px-4 py-3 text-sm text-[#1C1A17] outline-none focus:border-[#C4873A]"
@@ -65,10 +101,11 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className="w-full rounded-xl bg-[#2C2416] py-3.5 text-sm font-semibold text-[#FAF8F4] hover:bg-[#3D3220]"
+            disabled={submitting}
+            className="w-full rounded-xl bg-[#2C2416] py-3.5 text-sm font-semibold text-[#FAF8F4] hover:bg-[#3D3220] disabled:cursor-not-allowed disabled:opacity-60"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            Sign in
+            {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
 

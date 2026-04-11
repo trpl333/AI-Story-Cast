@@ -4,7 +4,7 @@ import { AuthContext, type AuthContextValue } from "./authContext";
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth must be used within an AuthProvider (e.g. MockAuthProvider).");
+    throw new Error("useAuth must be used within an AuthProvider (e.g. SupabaseAuthProvider).");
   }
   return ctx;
 }

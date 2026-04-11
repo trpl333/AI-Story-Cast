@@ -17,7 +17,7 @@ Concise roadmap for evolving AIStoryCast from the current marketing site + `/dem
 | **6** | Discussion / dissection layer | Passage-scoped chat, LLM with citations/context window tied to offsets, moderation, rate limits, audit logging. **Exit:** paid-safe discussion MVP. |
 | **7** | Production hardening | Observability, backups, GDPR flows, abuse prevention, performance budgets, incident runbooks, SLAs. **Exit:** launch-ready operations. |
 
-**Auth (Phase 2 prep):** The app ships with a **browser-local mock** session at the root (`MockAuthProvider`) and a stable `useAuth()` contract. The preferred path to **Supabase Auth** — provider swap, session hydration, protected routes, login/signup/logout, and `getAccessToken()` for future APIs — is documented in [`docs/auth-supabase-migration.md`](auth-supabase-migration.md). `@supabase/supabase-js` is already in `package.json` but not wired under `src/` yet.
+**Auth (Phase 2):** The app uses **`SupabaseAuthProvider`** at the root with the stable `useAuth()` / `AuthContextValue` contract (`isSessionPending`, `getAccessToken()`, etc.). Env vars and dashboard notes: [`docs/auth-supabase-migration.md`](auth-supabase-migration.md). `MockAuthProvider` remains optional for local-only work.
 
 **Ordering note:** Phases 4–6 overlap in practice (e.g. audio before full ingestion for one pilot title). Keep **Curated Library** (see [§8 — Content source modes](#8-content-source-modes--book-acquisition)) as the only content path until Phase 3–4 are stable.
 

@@ -1,23 +1,24 @@
 # Auth: mock → Supabase (implementation plan)
 
-This document is the **handoff guide** for replacing the browser-local mock session with **Supabase Auth**, without changing route shape or app layout. **No production Supabase wiring is required to merge this plan** — the running app continues to use `MockAuthProvider`.
+**Status:** The SPA uses **`SupabaseAuthProvider`** in `App.tsx` with `src/lib/supabaseClient.ts`. Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`). **`MockAuthProvider`** remains in the repo for local-only demos or temporary swap-back.
 
-**Repo fact:** `@supabase/supabase-js` is already listed in `package.json` but **no Supabase client or auth calls exist under `src/` yet**. Firebase is also present as a dependency and unused in `src/` — **preferred target for this product is Supabase Auth** unless you explicitly choose otherwise.
+**Repo fact:** `@supabase/supabase-js` is a dependency; the browser client is created only when both env vars are set. Firebase is also listed in `package.json` and is unused under `src/`.
 
 ---
 
-## 1. Current mock structure (what exists today)
+## 1. Current structure (what exists today)
 
 | Piece | Role |
 |-------|------|
-| `App.tsx` | Wraps routes with `MockAuthProvider` (inside `BrowserRouter`). |
+| `App.tsx` | Wraps routes with `SupabaseAuthProvider` (inside `BrowserRouter`). |
 | `auth/authContext.ts` | `AuthContext` + `AuthContextValue` — session shape consumed by the UI. |
-| `auth/MockAuthProvider.tsx` | Implements the context: `localStorage` + `useSyncExternalStore`, instant “login”. |
+| `auth/SupabaseAuthProvider.tsx` | Supabase session + `onAuthStateChange`, implements `AuthContextValue`. |
+| `auth/MockAuthProvider.tsx` | Optional localStorage mock (not mounted by default). |
 | `auth/useAuth.ts` | `useAuth()` — **single hook** all screens should use. |
 | `auth/ProtectedRoute.tsx` | If `!isAuthenticated` → `Navigate` to `/login` with `state.from`; respects `isSessionPending`. |
-| `pages/auth/LoginPage.tsx` / `SignupPage.tsx` | Forms call `signIn` / `signUp`; redirect when `isAuthenticated`. |
+| `pages/auth/LoginPage.tsx` / `SignupPage.tsx` | Real Supabase errors + email-confirmation messaging via `EmailConfirmationRequiredError`. |
 
-**Exact replacement path:** Keep **`AuthContext` / `AuthContextValue` / `useAuth` / `ProtectedRoute` / route definitions** stable. Swap **only the provider implementation** at the root: `MockAuthProvider` → a new `SupabaseAuthProvider` that satisfies the same `AuthContextValue` contract (see §3). Optionally delete or archive `MockAuthProvider.tsx` after the Supabase provider ships.
+**Replacement path for other providers:** Keep **`AuthContext` / `AuthContextValue` / `useAuth` / `ProtectedRoute`**. Swap the root provider or implement the same contract inside `SupabaseAuthProvider`.
 
 ---
 
@@ -30,19 +31,13 @@ This document is the **handoff guide** for replacing the browser-local mock sess
 
 ### 2.2 Provider at app root
 
-Replace in `App.tsx`:
-
-```tsx
-<MockAuthProvider>
-```
-
-with:
+`App.tsx` already uses:
 
 ```tsx
 <SupabaseAuthProvider>
 ```
 
-Keep order: `BrowserRouter` → **`SupabaseAuthProvider`** → `AppRoutes` (session listeners must see router if you ever read location inside the provider; today they do not).
+Order: `BrowserRouter` → **`SupabaseAuthProvider`** → `AppRoutes`.
 
 ### 2.3 Session hook shape (`AuthContextValue`)
 
@@ -89,20 +84,31 @@ The app already expects (see `auth/authContext.ts`):
 
 ## 3. Files: keep vs replace
 
-| Keep (evolve in place) | Replace / add |
-|------------------------|----------------|
-| `auth/authContext.ts` — contract | **`auth/SupabaseAuthProvider.tsx`** (new) — subscribe `onAuthStateChange`, implement `AuthContextValue` |
-| `auth/useAuth.ts` | **`src/lib/supabaseClient.ts`** (new) — `createClient` |
-| `auth/ProtectedRoute.tsx` — gate + pending state | `App.tsx` — swap provider import |
-| `router/config.tsx` — `/login`, `/signup`, protected `/app` | Optional: `pages/auth/AuthCallbackPage.tsx` + route if using redirect OAuth |
-| `pages/auth/LoginPage.tsx`, `SignupPage.tsx` — UX + error handling | Remove mock-specific copy when live |
-| `types.ts` — `AuthUser` | Profile table / metadata strategy (backend phase) |
+| Keep (evolve in place) | Notes |
+|------------------------|--------|
+| `auth/authContext.ts` — contract | Stable |
+| `auth/SupabaseAuthProvider.tsx` | `getSession` + `onAuthStateChange`, `AuthContextValue` |
+| `auth/useAuth.ts` | Stable |
+| `src/lib/supabaseClient.ts` | Singleton browser client |
+| `auth/ProtectedRoute.tsx` | Gate + `isSessionPending` |
+| `router/config.tsx` | `/login`, `/signup`, protected `/app` |
+| `pages/auth/LoginPage.tsx`, `SignupPage.tsx` | Supabase errors + env missing banner |
+| `types.ts` — `AuthUser` | Maps from `user_metadata.display_name` |
+
+Optional later: `pages/auth/AuthCallbackPage.tsx` + route if using OAuth redirect flows beyond email/password.
 
 | Remove or demote after Supabase works |
 |---------------------------------------|
-| `auth/MockAuthProvider.tsx` — delete or keep behind `import.meta.env.DEV` only for demos |
+| `auth/MockAuthProvider.tsx` — optional; delete if you no longer need a no-network auth stub |
 
-**Naming:** Prefer **`SupabaseAuthProvider`** next to `MockAuthProvider` until cutover; then a single `AuthProvider` re-export is optional sugar.
+---
+
+## 3b. Supabase Dashboard settings
+
+- **Project Settings → API:** copy **Project URL** → `VITE_SUPABASE_URL`, and **anon public** key → `VITE_SUPABASE_ANON_KEY` (never the `service_role` key in the SPA).
+- **Authentication → Providers:** enable **Email** for password sign-in/sign-up used by this app.
+- **Authentication → URL configuration:** set **Site URL** to your local dev origin (e.g. `http://localhost:5173`) and production URL when you deploy. Add **Redirect URLs** for any preview domains you use.
+- **Authentication → Sign up / Email:** if **Confirm email** is enabled, new users see the in-app “check your email” message until they confirm; if disabled, Supabase returns a session immediately and the app redirects to `/app` after signup.
 
 ---
 
