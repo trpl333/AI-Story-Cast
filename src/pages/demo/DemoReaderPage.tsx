@@ -1,13 +1,31 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../home/components/Navbar";
 import Footer from "../home/components/Footer";
+import { publicAsset } from "@/lib/publicAsset";
 
 const voices = [
   { name: "Narrator", color: "#8B7355", icon: "ri-mic-2-line" },
   { name: "Alice", color: "#C4873A", icon: "ri-user-smile-line" },
   { name: "White Rabbit", color: "#7A9E7E", icon: "ri-ghost-smile-line" },
 ] as const;
+
+/** Resolved URL for `public/assets/demo/chapter1.mp3` (respects Vite `base`). */
+const CHAPTER1_AUDIO_SRC = publicAsset("assets/demo/chapter1.mp3");
+
+/**
+ * Future paragraph sync: end time in seconds for each passage block above (same length as `passageParagraphs`).
+ * Active paragraph = first index where `currentTime < end`; if none, last block is active when past final end.
+ * Leave empty until you have real alignment from narration tooling.
+ */
+const CHAPTER1_PARAGRAPH_END_SEC: number[] = [];
+
+function formatTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 /** Abridged, lightly modernized punctuation from the public-domain opening of Chapter I (Lewis Carroll). */
 const passageParagraphs = [
@@ -27,9 +45,96 @@ const passageParagraphs = [
 
 export default function DemoReaderPage() {
   const [activeVoice, setActiveVoice] = useState<string>("Narrator");
-  const [playing, setPlaying] = useState(false);
   const [discussDraft, setDiscussDraft] = useState("");
   const [discussThread, setDiscussThread] = useState<{ from: "you" | "note"; text: string }[]>([]);
+
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioStatus, setAudioStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  let activeParagraphIndex = -1;
+  if (CHAPTER1_PARAGRAPH_END_SEC.length === passageParagraphs.length) {
+    const idx = CHAPTER1_PARAGRAPH_END_SEC.findIndex((end) => currentTime < end);
+    activeParagraphIndex = idx === -1 ? passageParagraphs.length - 1 : idx;
+  }
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    const onLoaded = () => {
+      setAudioStatus("ready");
+      if (Number.isFinite(el.duration) && el.duration > 0) {
+        setDuration(el.duration);
+      }
+    };
+    const onError = () => {
+      setAudioStatus("error");
+      setPlaying(false);
+      setDuration(0);
+    };
+    const onTimeUpdate = () => setCurrentTime(el.currentTime);
+    const onDurationChange = () => {
+      if (Number.isFinite(el.duration) && el.duration > 0) setDuration(el.duration);
+    };
+    const onEnded = () => setPlaying(false);
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+
+    el.addEventListener("loadeddata", onLoaded);
+    el.addEventListener("canplay", onLoaded);
+    el.addEventListener("error", onError);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    el.addEventListener("durationchange", onDurationChange);
+    el.addEventListener("ended", onEnded);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+
+    if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && el.error === null) {
+      onLoaded();
+    }
+
+    return () => {
+      el.removeEventListener("loadeddata", onLoaded);
+      el.removeEventListener("canplay", onLoaded);
+      el.removeEventListener("error", onError);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+      el.removeEventListener("durationchange", onDurationChange);
+      el.removeEventListener("ended", onEnded);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  const togglePlay = useCallback(async () => {
+    const el = audioRef.current;
+    if (!el || audioStatus !== "ready") return;
+    if (el.paused) {
+      try {
+        await el.play();
+      } catch {
+        setPlaying(false);
+      }
+    } else {
+      el.pause();
+    }
+  }, [audioStatus]);
+
+  const seekFromBar = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = audioRef.current;
+      if (!el || audioStatus !== "ready" || !duration) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      el.currentTime = pct * duration;
+      setCurrentTime(el.currentTime);
+    },
+    [audioStatus, duration],
+  );
 
   const sendDiscuss = () => {
     const t = discussDraft.trim();
@@ -61,8 +166,9 @@ export default function DemoReaderPage() {
             className="mt-4 text-sm leading-relaxed text-[#5C5346]"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            You&apos;re on a front-end slice only: text is public domain, audio is a placeholder, and passage chat is
-            not wired to a model yet. AI-assisted discussion and word-perfect synced scrolling are evolving features.
+            You&apos;re on a front-end slice only: text is public domain, passage chat is not wired to a model yet, and
+            synced word-level highlighting is still evolving. When <code className="text-[#1C1A17]">chapter1.mp3</code> is
+            present, you can play a bundled local sample below.
           </p>
         </div>
 
@@ -117,35 +223,67 @@ export default function DemoReaderPage() {
             ))}
           </div>
 
-          {/* Placeholder audio — swap `src` when you add e.g. public/assets/demo/chapter1.mp3 */}
           <div className="border-b border-[#3D3220]/60 px-6 py-5">
             <p className="mb-3 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Audio (placeholder)
+              Audio sample
             </p>
-            <div className="rounded-2xl border border-dashed border-[#6B6355]/50 bg-[#2C2416]/60 px-4 py-4">
-              <p className="mb-3 text-[#8B7B6B] text-xs leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-                No narration file is bundled yet. Controls below are for layout only — drop an MP3 into{" "}
-                <code className="text-[#C4B89A]">public/assets/demo/</code> and wire the{" "}
-                <code className="text-[#C4B89A]">&lt;audio&gt;</code> element when ready.
-              </p>
-              <audio className="hidden" preload="none" />
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setPlaying((p) => !p)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C4873A] text-white hover:bg-[#D4975A]"
-                  aria-label={playing ? "Pause (inactive)" : "Play (inactive)"}
-                >
-                  <i className={`${playing ? "ri-pause-fill" : "ri-play-fill"} text-lg`} aria-hidden />
-                </button>
-                <div className="h-1.5 flex-1 rounded-full bg-[#3D3220]">
-                  <div className="h-full w-[0%] rounded-full bg-[#C4873A]" />
-                </div>
-                <span className="text-[#6B6355] text-xs tabular-nums" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  0:00 / —
-                </span>
+
+            <audio ref={audioRef} src={CHAPTER1_AUDIO_SRC} preload="metadata" className="hidden" />
+
+            {audioStatus === "error" ? (
+              <div className="rounded-2xl border border-dashed border-[#6B6355]/60 bg-[#2C2416]/60 px-4 py-5">
+                <p className="text-[#E8D9C0] text-sm font-medium" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Audio sample coming next
+                </p>
+                <p className="mt-2 text-[#8B7B6B] text-xs leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  We couldn&apos;t load <code className="text-[#C4B89A]">public/assets/demo/chapter1.mp3</code>. Add that
+                  file (MP3) and refresh — the player will appear automatically.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl border border-[#3D3220] bg-[#2C2416]/60 px-4 py-4">
+                {audioStatus === "loading" ? (
+                  <p className="mb-3 text-[#8B7B6B] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Loading audio…
+                  </p>
+                ) : (
+                  <p className="mb-3 text-[#8B7B6B] text-xs leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Replace <code className="text-[#C4B89A]">chapter1.mp3</code> with your Chapter I narration when ready;
+                    the bundled file is only a short sample for wiring tests.
+                  </p>
+                )}
+
+                <div className={`flex items-center gap-4 ${audioStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}>
+                  <button
+                    type="button"
+                    onClick={() => void togglePlay()}
+                    disabled={audioStatus !== "ready"}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C4873A] text-white hover:bg-[#D4975A] disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={playing ? "Pause" : "Play"}
+                  >
+                    <i className={`${playing ? "ri-pause-fill" : "ri-play-fill"} text-lg`} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex flex-1 cursor-pointer items-center rounded-md py-2 text-left disabled:cursor-not-allowed"
+                    onClick={seekFromBar}
+                    disabled={audioStatus !== "ready" || !duration}
+                    aria-label="Seek audio"
+                  >
+                    <div className="pointer-events-none h-1.5 w-full overflow-hidden rounded-full bg-[#3D3220]">
+                      <div
+                        className="h-full rounded-full bg-[#C4873A] transition-[width] duration-150 ease-linear"
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                  </button>
+                  <span className="text-[#6B6355] text-xs tabular-nums whitespace-nowrap" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {formatTime(currentTime)} / {duration > 0 ? formatTime(duration) : "—"}
+                  </span>
+                </div>
+
+              </div>
+            )}
           </div>
 
           <div className="grid gap-0 lg:grid-cols-[1fr_320px]">
@@ -154,16 +292,22 @@ export default function DemoReaderPage() {
                 Reading text
               </p>
               <div className="space-y-6 text-left">
-                {passageParagraphs.map((block, i) => (
-                  <div key={i}>
-                    <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {block.label}
-                    </p>
-                    <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
-                      {block.text}
-                    </p>
-                  </div>
-                ))}
+                {passageParagraphs.map((block, i) => {
+                  const highlight = activeParagraphIndex === i;
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-lg px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/10 ring-1 ring-[#C4873A]/25" : ""}`}
+                    >
+                      <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {block.label}
+                      </p>
+                      <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
+                        {block.text}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
