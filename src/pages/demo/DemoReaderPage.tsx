@@ -125,7 +125,7 @@ export default function DemoReaderPage() {
   }, [audioStatus]);
 
   const seekFromBar = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: React.MouseEvent<HTMLButtonElement>) => {
       const el = audioRef.current;
       if (!el || audioStatus !== "ready" || !duration) return;
       const rect = e.currentTarget.getBoundingClientRect();

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
+import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
 
 const sampleBooks = [
   {
@@ -8,7 +9,7 @@ const sampleBooks = [
     author: "Lewis Carroll",
     tag: "Featured",
     cover: publicAsset("assets/home/alice-cover.jpg"),
-    href: "/demo" as const,
+    href: ALICE_CHAPTER_1_PATH,
   },
   {
     id: "pride",
@@ -38,8 +39,8 @@ export default function LibraryPage() {
         Public-domain shelf
       </h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-        Sample cards for layout only. Only <strong className="font-medium text-[#1C1A17]">Alice</strong> links to the
-        live demo reader today; other titles will unlock as ingestion and audio ship.
+        Sample cards for layout only. <strong className="font-medium text-[#1C1A17]">Alice</strong> opens the seeded
+        in-app reader (Chapter I); other titles unlock as ingestion and audio ship. The public <Link to="/demo" className="font-medium text-[#C4873A] hover:underline">/demo</Link> page stays a no-login teaser.
       </p>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -68,7 +69,7 @@ export default function LibraryPage() {
                   {book.author}
                 </p>
                 <span className="mt-4 text-sm font-semibold text-[#C4873A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  {book.href ? "Open reader demo →" : "Ingestion pipeline — soon"}
+                  {book.href ? "Open in-app reader →" : "Ingestion pipeline — soon"}
                 </span>
               </div>
             </>

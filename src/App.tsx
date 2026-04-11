@@ -8,6 +8,7 @@ function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <BrowserRouter basename={__BASE_PATH__}>
+        {/* Swap for SupabaseAuthProvider per docs/auth-supabase-migration.md */}
         <MockAuthProvider>
           <AppRoutes />
         </MockAuthProvider>

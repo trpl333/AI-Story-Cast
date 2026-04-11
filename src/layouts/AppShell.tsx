@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
+import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -9,11 +10,11 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function AppShell() {
-  const { user, signOut } = useMockAuth();
+  const { user, signOut } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     setMobileNavOpen(false);
   };
 
@@ -26,6 +27,10 @@ export default function AppShell() {
       <NavLink to="/app/library" className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
         <i className="ri-book-open-line text-lg" aria-hidden />
         Library
+      </NavLink>
+      <NavLink to={ALICE_CHAPTER_1_PATH} className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
+        <i className="ri-book-read-line text-lg" aria-hidden />
+        Reader
       </NavLink>
       <Link
         to="/demo"

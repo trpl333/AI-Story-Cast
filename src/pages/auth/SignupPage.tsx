@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
 import AuthPageChrome from "./AuthPageChrome";
 
 export default function SignupPage() {
-  const { isAuthenticated, signUp } = useMockAuth();
+  const { isAuthenticated, signUp } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -14,9 +14,9 @@ export default function SignupPage() {
     if (isAuthenticated) navigate("/app", { replace: true });
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    signUp(email, displayName, password);
+    await signUp(email, displayName, password);
   };
 
   return (

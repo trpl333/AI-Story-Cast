@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
 import AuthPageChrome from "./AuthPageChrome";
 
 export default function LoginPage() {
-  const { isAuthenticated, signIn } = useMockAuth();
+  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -16,9 +16,9 @@ export default function LoginPage() {
     navigate(from, { replace: true });
   }, [isAuthenticated, location.state, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    signIn(email, password);
+    await signIn(email, password);
   };
 
   return (

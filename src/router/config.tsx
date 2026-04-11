@@ -9,6 +9,7 @@ import SignupPage from "../pages/auth/SignupPage";
 import DashboardPage from "../pages/app/DashboardPage";
 import LibraryPage from "../pages/app/LibraryPage";
 import AccountPage from "../pages/app/AccountPage";
+import ReadChapterPage from "../pages/app/ReadChapterPage";
 
 const routes: RouteObject[] = [
   {
@@ -36,6 +37,7 @@ const routes: RouteObject[] = [
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "library", element: <LibraryPage /> },
+          { path: "read/:bookId/:chapterId", element: <ReadChapterPage /> },
           { path: "account", element: <AccountPage /> },
         ],
       },

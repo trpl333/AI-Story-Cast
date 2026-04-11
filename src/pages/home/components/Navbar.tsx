@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
 
 const navLinks = [
   { label: "How it Works", to: "/#how-it-works" },
@@ -13,7 +13,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isAuthenticated, signOut } = useMockAuth();
+  const { isAuthenticated, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,8 +22,8 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     setMenuOpen(false);
     navigate("/");
   };

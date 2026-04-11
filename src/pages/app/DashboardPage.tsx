@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
+import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
 
 export default function DashboardPage() {
-  const { user } = useMockAuth();
+  const { user } = useAuth();
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -19,20 +20,20 @@ export default function DashboardPage() {
 
       <div className="mt-10 grid gap-5 md:grid-cols-3">
         <Link
-          to="/demo"
+          to={ALICE_CHAPTER_1_PATH}
           className="group rounded-2xl border border-[#E0D8CC] bg-white p-6 shadow-sm transition-all hover:border-[#C4B89A] hover:shadow-md"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDF6EC] text-[#C4873A]">
-            <i className="ri-play-circle-line text-xl" aria-hidden />
+            <i className="ri-book-read-line text-xl" aria-hidden />
           </div>
           <h2 className="mt-4 text-lg font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
             Continue reading
           </h2>
           <p className="mt-2 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Jump back into the public demo — Alice, Chapter I — while we wire saved progress.
+            Pick up Alice in Wonderland — Chapter I — in the in-app reader (logged-in product path).
           </p>
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#C4873A] group-hover:gap-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Open demo
+            Open reader
             <i className="ri-arrow-right-line" aria-hidden />
           </span>
         </Link>

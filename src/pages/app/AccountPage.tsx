@@ -1,7 +1,7 @@
-import { useMockAuth } from "@/auth/useMockAuth";
+import { useAuth } from "@/auth/useAuth";
 
 export default function AccountPage() {
-  const { user, signOut } = useMockAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -59,7 +59,7 @@ export default function AccountPage() {
           </p>
           <button
             type="button"
-            onClick={() => signOut()}
+            onClick={() => void signOut()}
             className="mt-4 rounded-xl bg-[#2C2416] px-5 py-2.5 text-sm font-semibold text-[#FAF8F4] hover:bg-[#3D3220]"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
