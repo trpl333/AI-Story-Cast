@@ -1,24 +1,24 @@
 const steps = [
   {
     number: "01",
-    icon: "ri-search-line",
-    title: "Search for a book",
+    icon: "ri-book-open-line",
+    title: "Open a curated classic",
     description:
-      "Browse thousands of public-domain classics — from Austen to Twain. Find your next great read in seconds.",
+      "We’re beginning with public-domain works we can ship responsibly. The first guided path stars Alice in Wonderland — more titles will follow as the experience stabilizes.",
   },
   {
     number: "02",
     icon: "ri-user-voice-line",
-    title: "Choose your cast",
+    title: "Set narrator + character voices",
     description:
-      "Pick a narrator voice and assign distinct AI voices to each character. Make the story feel alive.",
+      "Choose a narrator voice and distinct voices for key characters. The goal is a small-cast performance, not a monotone wall of text.",
   },
   {
     number: "03",
     icon: "ri-play-circle-line",
-    title: "Play and follow along",
+    title: "Listen, scroll, pause to discuss",
     description:
-      "Text scrolls in sync with narration. Pause anytime to ask questions, get explanations, or just think.",
+      "Follow synced scrolling text while you listen. When a line sticks with you, pause to dissect it, ask questions, or chase a tangent — still anchored to the passage on screen.",
   },
 ];
 
@@ -41,14 +41,14 @@ export default function HowItWorks() {
             >
               Three steps to a
               <br />
-              <span className="italic">richer reading life.</span>
+              <span className="italic">livelier chapter.</span>
             </h2>
           </div>
           <p
             className="text-[#5C5346] text-base max-w-xs leading-relaxed"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            No setup. No subscriptions. Just pick a book and start listening — with your brain fully engaged.
+            This is still a demo-stage product: flows will move, voices will improve, and the catalog will grow — but the north star stays the same: reading that talks back.
           </p>
         </div>
 
@@ -86,26 +86,33 @@ export default function HowItWorks() {
           ))}
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           {[
-            { value: "50,000+", label: "Public-domain books" },
-            { value: "12+", label: "Narrator voices" },
-            { value: "< 30s", label: "To start listening" },
-            { value: "100%", label: "Free to explore" },
-          ].map((stat, i) => (
-            <div key={i} className="text-center py-6 border-t border-[#E0D8CC]">
+            {
+              title: "Featured first title",
+              body: "Alice in Wonderland is the showcase spine while we prove out narration, sync, and discussion loops.",
+            },
+            {
+              title: "Public-domain only (for now)",
+              body: "We’re building on texts we can redistribute and experiment with openly — no shady scraping, no gray rights.",
+            },
+            {
+              title: "Invites, not imaginary scale",
+              body: "We’re not publishing vanity metrics. Early access is how we find readers who want to shape what ships next.",
+            },
+          ].map((item, i) => (
+            <div key={i} className="text-left py-6 border-t border-[#E0D8CC] md:text-center md:px-2">
               <p
-                className="text-3xl md:text-4xl font-bold text-[#1C1A17] mb-1"
+                className="text-lg font-bold text-[#1C1A17] mb-2"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                {stat.value}
+                {item.title}
               </p>
               <p
-                className="text-sm text-[#8B7B6B]"
+                className="text-sm text-[#8B7B6B] leading-relaxed"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                {stat.label}
+                {item.body}
               </p>
             </div>
           ))}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { publicAsset } from "@/lib/publicAsset";
 
 const voices = [
   { name: "Narrator", icon: "ri-mic-2-line", color: "#8B7355", active: true },
@@ -53,22 +54,23 @@ export default function DemoShowcase() {
               className="inline-block bg-white text-[#5C5346] text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-5 border border-[#E0D8CC]"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              Live Demo
+              Demo preview
             </span>
             <h2
               className="text-4xl md:text-5xl font-bold text-[#1C1A17] leading-tight"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              Hear it for yourself.
+              Featured first book:
               <br />
-              <span className="italic">Alice in Wonderland.</span>
+              <span className="italic">Alice in Wonderland</span>
             </h2>
           </div>
           <p
-            className="text-[#5C5346] text-base max-w-xs leading-relaxed"
+            className="text-[#5C5346] text-base max-w-md leading-relaxed"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            A full cast of AI voices, synced text, and an AI ready to answer your questions — all in one place.
+            Below is a UI preview (not a live session yet): narrator + character lanes, synced scrolling copy, and a
+            passage-tied chat lane for dissecting what you just heard — modeled on Chapter I of Carroll&apos;s public-domain text.
           </p>
         </div>
 
@@ -78,8 +80,8 @@ export default function DemoShowcase() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D3220]/60">
             <div className="flex items-center gap-3">
               <img
-                src="https://public.readdy.ai/ai/img_res/0ab84d36-9a22-4a00-a214-9638667b9817.png"
-                alt="StoryCast"
+                src={publicAsset("assets/home/logo.png")}
+                alt="AIStoryCast"
                 className="h-6 w-6 object-contain"
               />
               <div>
@@ -91,10 +93,9 @@ export default function DemoShowcase() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#C4873A] animate-pulse"></span>
-              <span className="text-[#6B6355] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>Live</span>
-            </div>
+            <span className="text-[#6B6355] text-xs font-medium" style={{ fontFamily: "'Inter', sans-serif" }}>
+              UI mock · audio not wired on this page
+            </span>
           </div>
 
           <div className="flex flex-col lg:flex-row">
@@ -167,8 +168,9 @@ export default function DemoShowcase() {
               <div className="p-5 border-b border-[#3D3220]/60">
                 <div className="flex gap-4 items-start">
                   <div className="w-16 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                    {/* Placeholder art: swap for an authentic public-domain cover (e.g. Project Gutenberg art) when you pick one. */}
                     <img
-                      src="https://readdy.ai/api/search-image?query=Alice%20in%20Wonderland%20vintage%20book%20cover%20illustration%2C%20classic%20Victorian%20style%2C%20warm%20amber%20and%20cream%20tones%2C%20ornate%20border%2C%20Alice%20falling%20down%20rabbit%20hole%2C%20antique%20book%20aesthetic%2C%20rich%20detailed%20illustration&width=128&height=160&seq=bookcover01&orientation=portrait"
+                      src={publicAsset("assets/home/alice-cover.jpg")}
                       alt="Alice in Wonderland"
                       className="w-full h-full object-cover object-top"
                     />
@@ -177,13 +179,10 @@ export default function DemoShowcase() {
                     <p className="text-[#E8D9C0] text-sm font-semibold mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
                       Alice in Wonderland
                     </p>
-                    <p className="text-[#6B6355] text-xs mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>Lewis Carroll, 1865</p>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <i key={s} className="ri-star-fill text-xs text-[#C4873A]"></i>
-                      ))}
-                      <span className="text-[#6B6355] text-xs ml-1" style={{ fontFamily: "'Inter', sans-serif" }}>4.9</span>
-                    </div>
+                    <p className="text-[#6B6355] text-xs mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>Lewis Carroll · public domain</p>
+                    <p className="text-[#6B6355] text-xs leading-snug" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Flagship title while we tune voices, sync, and discussion UX.
+                    </p>
                   </div>
                 </div>
               </div>

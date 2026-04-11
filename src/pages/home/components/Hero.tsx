@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { publicAsset } from "@/lib/publicAsset";
 
 export default function Hero() {
   const floatRef = useRef<HTMLDivElement>(null);
@@ -23,7 +24,7 @@ export default function Hero() {
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://readdy.ai/api/search-image?query=warm%20cozy%20library%20interior%20with%20golden%20light%20streaming%20through%20tall%20windows%2C%20rows%20of%20antique%20books%2C%20soft%20amber%20and%20cream%20tones%2C%20magical%20dust%20particles%20floating%20in%20light%2C%20elegant%20reading%20atmosphere%2C%20painterly%20artistic%20style%2C%20warm%20neutral%20palette%2C%20no%20people&width=1600&height=900&seq=hero001&orientation=landscape"
+          src={publicAsset("assets/home/hero-library.jpg")}
           alt="Warm library background"
           className="w-full h-full object-cover object-top"
         />
@@ -40,7 +41,7 @@ export default function Hero() {
         <div className="inline-flex items-center gap-2 bg-[#2C2416]/8 border border-[#2C2416]/15 rounded-full px-4 py-1.5 mb-8">
           <span className="w-2 h-2 rounded-full bg-[#C4873A] animate-pulse flex-shrink-0"></span>
           <span className="text-xs font-medium text-[#5C5346] tracking-wide uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Now in Early Access
+            Early build · curated classics
           </span>
         </div>
 
@@ -59,8 +60,9 @@ export default function Hero() {
           className="text-lg md:text-xl text-[#5C5346] max-w-2xl leading-relaxed mb-10"
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
-          Listen, read, and discuss classic books with AI-powered narration,
-          synced text, and character voices.
+          An interactive reading experience for public-domain books: listen with a narrator and character voices,
+          follow along with synced scrolling text, and pause to discuss or dissect a passage. We&apos;re starting with
+          curated classics — first up, <span className="text-[#1C1A17] font-medium">Alice in Wonderland</span> — while the product is still in demo shape.
         </p>
 
         {/* CTAs */}
@@ -70,14 +72,14 @@ export default function Hero() {
             className="px-8 py-3.5 bg-[#2C2416] text-[#FAF8F4] rounded-full font-semibold text-sm hover:bg-[#3D3220] transition-all duration-300 cursor-pointer whitespace-nowrap shadow-lg shadow-[#2C2416]/20"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            Try the Demo
+            Preview the Experience
           </a>
           <a
             href="#waitlist"
             className="px-8 py-3.5 bg-transparent text-[#1C1A17] rounded-full font-semibold text-sm border border-[#C4B89A] hover:bg-[#F0EBE3] transition-all duration-300 cursor-pointer whitespace-nowrap"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            Join Waitlist
+            Get Early Access
           </a>
         </div>
 
@@ -88,11 +90,11 @@ export default function Hero() {
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#3D3220]/60">
               <div className="flex items-center gap-2">
                 <img
-                  src="https://public.readdy.ai/ai/img_res/0ab84d36-9a22-4a00-a214-9638667b9817.png"
-                  alt="StoryCast"
+                  src={publicAsset("assets/home/logo.png")}
+                  alt="AIStoryCast"
                   className="h-5 w-5 object-contain"
                 />
-                <span className="text-[#C4B89A] text-xs font-semibold" style={{ fontFamily: "'Playfair Display', serif" }}>StoryCast</span>
+                <span className="text-[#C4B89A] text-xs font-semibold" style={{ fontFamily: "'Playfair Display', serif" }}>AIStoryCast</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[#6B6355] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>Alice in Wonderland</span>
@@ -163,23 +165,13 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Social proof */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mt-10 text-[#8B7B6B]">
-          <div className="flex -space-x-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-8 h-8 rounded-full border-2 border-[#FAF8F4] overflow-hidden">
-                <img
-                  src={`https://readdy.ai/api/search-image?query=portrait%20of%20a%20friendly%20reader%20person%20warm%20tones%20minimal%20background%20professional%20headshot&width=64&height=64&seq=avatar${i}&orientation=squarish`}
-                  alt="User"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            ))}
-          </div>
-          <p className="text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>
-            <strong className="text-[#1C1A17]">2,400+</strong> readers already on the waitlist
-          </p>
-        </div>
+        <p
+          className="mt-10 text-sm text-[#8B7B6B] max-w-md text-center"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        >
+          No inflated waitlist numbers here — we&apos;re an early-stage build. If this sounds fun, join for updates and
+          a shot at early access when we open invites.
+        </p>
       </div>
     </section>
   );

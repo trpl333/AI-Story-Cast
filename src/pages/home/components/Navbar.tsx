@@ -1,4 +1,12 @@
 import { useState, useEffect } from "react";
+import { publicAsset } from "@/lib/publicAsset";
+
+const navLinks = [
+  { label: "How it Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
+  { label: "Demo preview", href: "#demo" },
+  { label: "Why Different", href: "#why-different" },
+];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,25 +28,25 @@ export default function Navbar() {
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5 cursor-pointer">
           <img
-            src="https://public.readdy.ai/ai/img_res/0ab84d36-9a22-4a00-a214-9638667b9817.png"
-            alt="StoryCast Logo"
+            src={publicAsset("assets/home/logo.png")}
+            alt="AIStoryCast"
             className="h-8 w-8 object-contain"
           />
           <span className="text-[#1C1A17] font-bold text-xl tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
-            StoryCast
+            AIStoryCast
           </span>
         </a>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
-          {["How it Works", "Features", "Demo", "Why Different"].map((item) => (
+          {navLinks.map((item) => (
             <a
-              key={item}
-              href={`#${item.toLowerCase().replace(/ /g, "-")}`}
+              key={item.href}
+              href={item.href}
               className="text-sm text-[#5C5346] hover:text-[#1C1A17] transition-colors duration-200 cursor-pointer whitespace-nowrap"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {item}
+              {item.label}
             </a>
           ))}
         </div>
@@ -49,13 +57,13 @@ export default function Navbar() {
             href="#demo"
             className="text-sm font-medium text-[#1C1A17] px-4 py-2 rounded-full border border-[#D4C9B8] hover:bg-[#F0EBE3] transition-colors duration-200 cursor-pointer whitespace-nowrap"
           >
-            Try Demo
+            Preview the Experience
           </a>
           <a
             href="#waitlist"
             className="text-sm font-medium text-[#FAF8F4] bg-[#2C2416] px-5 py-2 rounded-full hover:bg-[#3D3220] transition-colors duration-200 cursor-pointer whitespace-nowrap"
           >
-            Join Waitlist
+            Get Early Access
           </a>
         </div>
 
@@ -72,22 +80,22 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="md:hidden bg-[#FAF8F4]/98 backdrop-blur-md border-t border-[#E8E0D4] px-6 py-5 flex flex-col gap-4">
-          {["How it Works", "Features", "Demo", "Why Different"].map((item) => (
+          {navLinks.map((item) => (
             <a
-              key={item}
-              href={`#${item.toLowerCase().replace(/ /g, "-")}`}
+              key={item.href}
+              href={item.href}
               className="text-sm text-[#5C5346] hover:text-[#1C1A17] transition-colors py-1 cursor-pointer"
               onClick={() => setMenuOpen(false)}
             >
-              {item}
+              {item.label}
             </a>
           ))}
           <div className="flex flex-col gap-2 pt-2 border-t border-[#E8E0D4]">
             <a href="#demo" className="text-sm font-medium text-center text-[#1C1A17] px-4 py-2.5 rounded-full border border-[#D4C9B8] cursor-pointer whitespace-nowrap">
-              Try Demo
+              Preview the Experience
             </a>
             <a href="#waitlist" className="text-sm font-medium text-center text-[#FAF8F4] bg-[#2C2416] px-5 py-2.5 rounded-full cursor-pointer whitespace-nowrap">
-              Join Waitlist
+              Get Early Access
             </a>
           </div>
         </div>

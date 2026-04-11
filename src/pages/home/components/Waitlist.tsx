@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { publicAsset } from "@/lib/publicAsset";
 
 export default function Waitlist() {
   const [submitted, setSubmitted] = useState(false);
@@ -14,6 +15,10 @@ export default function Waitlist() {
     setLoading(true);
     try {
       const body = new URLSearchParams({ name, email });
+      /**
+       * Stays remote: Readdy-hosted form collector (not a static asset). Replace with your own API or form
+       * provider when you decommission Readdy — a local file cannot substitute this URL.
+       */
       await fetch("https://readdy.ai/api/form/d7d9ghfsch5bvrijfee0", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -31,10 +36,9 @@ export default function Waitlist() {
     <section id="waitlist" className="py-24 md:py-32 bg-[#F5F0E8]">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
         <div className="relative rounded-3xl overflow-hidden">
-          {/* Background */}
           <img
-            src="https://readdy.ai/api/search-image?query=abstract%20warm%20golden%20light%20bokeh%20background%2C%20soft%20amber%20and%20cream%20tones%2C%20dreamy%20atmospheric%20texture%2C%20no%20people%2C%20painterly%20abstract%20art%2C%20warm%20neutral%20palette%2C%20elegant%20and%20premium%20feel%2C%20soft%20gradients%2C%20magical%20glow&width=1400&height=700&seq=waitlistbg01&orientation=landscape"
-            alt="Waitlist background"
+            src={publicAsset("assets/home/waitlist-bg.jpg")}
+            alt=""
             className="absolute inset-0 w-full h-full object-cover object-top"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-[#1C1A17]/85 via-[#2C2416]/75 to-[#1C1A17]/80"></div>
@@ -61,13 +65,14 @@ export default function Waitlist() {
                 className="text-[#C4B89A] text-base leading-relaxed mb-6 max-w-md"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                StoryCast is launching soon. Join the waitlist and get early access, exclusive voice packs, and a front-row seat to the future of reading.
+                AIStoryCast is still a demo-stage build. Join the list if you want occasional updates, invite-only previews,
+                and a chance to steer what we ship next — no fabricated perks, just honest progress notes.
               </p>
               <div className="flex flex-wrap gap-4">
                 {[
-                  { icon: "ri-gift-line", text: "Free early access" },
+                  { icon: "ri-gift-line", text: "Invite windows when we’re ready" },
                   { icon: "ri-shield-check-line", text: "No spam, ever" },
-                  { icon: "ri-notification-line", text: "Launch day invite" },
+                  { icon: "ri-notification-line", text: "What we shipped lately" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className="w-5 h-5 flex items-center justify-center">
@@ -98,7 +103,7 @@ export default function Waitlist() {
                     className="text-[#8B7B6B] text-sm leading-relaxed"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    We&apos;ll reach out as soon as StoryCast is ready for you. Keep an eye on your inbox.
+                    We&apos;ll reach out when AIStoryCast has the next meaningful preview. Keep an eye on your inbox.
                   </p>
                 </div>
               ) : (
@@ -117,7 +122,7 @@ export default function Waitlist() {
                     className="text-[#6B6355] text-sm mb-6"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    Join 2,400+ readers already waiting.
+                    Small list today — help us grow it the right way.
                   </p>
 
                   <div className="space-y-4">

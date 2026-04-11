@@ -1,28 +1,36 @@
+import { publicAsset } from "@/lib/publicAsset";
+
 const points = [
   {
     icon: "ri-brain-line",
-    title: "Not just text-to-speech",
+    title: "Not just flat text-to-speech",
     description:
-      "TTS reads words. StoryCast performs stories. Every character has a voice, every scene has a mood — it's a full cast, not a robot.",
+      "AIStoryCast is aiming for small-cast energy: a narrator plus distinct character voices so dialogue reads like dialogue, not a monotone skim.",
   },
   {
     icon: "ri-book-open-line",
-    title: "Books become experiences",
+    title: "Public-domain roots",
     description:
-      "We turn static text into interactive sessions. Pause, explore, question, and understand — the way great teachers always intended.",
+      "We’re grounding the experience in books everyone can access legally — starting with Alice — then widening the curated shelf as quality holds up.",
   },
   {
     icon: "ri-lightbulb-flash-line",
-    title: "Understand while you listen",
+    title: "Stay oriented while you listen",
     description:
-      "No more zoning out. Synced text keeps you anchored, and AI explanations mean you never lose the thread of a complex passage.",
+      "Synced scrolling text is the safety rail: you can look away, daydream, and snap back without hunting for the sentence that just played.",
   },
   {
     icon: "ri-heart-pulse-line",
-    title: "Built for real readers",
+    title: "For curious readers, not passive binges",
     description:
-      "Whether you're a student, a parent reading with kids, or a lifelong learner — StoryCast meets you where you are.",
+      "Students, bedtime storytellers, and stubborn classic finishers all share one habit — they talk back to the page. Now the page can answer.",
   },
+];
+
+const builtFor = [
+  "Book clubs who wish the audiobook could pause for a tangent",
+  "Teachers and learners dissecting language in the open",
+  "Anyone who wants classics to feel theatrical, not homeworky",
 ];
 
 export default function WhyDifferent() {
@@ -34,32 +42,25 @@ export default function WhyDifferent() {
             {/* Left image */}
             <div className="lg:w-[45%] relative min-h-[400px] lg:min-h-0">
               <img
-                src="https://readdy.ai/api/search-image?query=person%20reading%20on%20a%20cozy%20dark%20evening%2C%20warm%20lamp%20light%2C%20open%20book%20with%20glowing%20pages%2C%20intimate%20reading%20atmosphere%2C%20rich%20amber%20and%20dark%20tones%2C%20cinematic%20mood%2C%20artistic%20painterly%20style%2C%20no%20text%2C%20beautiful%20composition&width=800&height=900&seq=whydiff01&orientation=portrait"
-                alt="Reading experience"
+                src={publicAsset("assets/home/why-different.jpg")}
+                alt="Cozy evening reading"
                 className="w-full h-full object-cover object-top"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#1C1A17]/60 lg:block hidden"></div>
               <div className="absolute inset-0 bg-gradient-to-t from-[#1C1A17]/80 to-transparent lg:hidden"></div>
 
-              {/* Floating quote card */}
               <div className="absolute bottom-8 left-6 right-6 lg:right-auto lg:max-w-xs bg-[#2C2416]/90 backdrop-blur-sm rounded-2xl p-5 border border-[#3D3220]">
-                <i className="ri-double-quotes-l text-3xl text-[#C4873A] block mb-2"></i>
-                <p className="text-[#E8D9C0] text-sm leading-relaxed italic mb-3" style={{ fontFamily: "'Lora', serif" }}>
-                  "It&apos;s the first time I actually finished a classic. StoryCast made it feel like a movie."
+                <p className="text-[#C4B89A] text-xs font-semibold uppercase tracking-widest mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  What AIStoryCast is built for
                 </p>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-                    <img
-                      src="https://readdy.ai/api/search-image?query=friendly%20young%20woman%20portrait%20warm%20tones%20minimal%20background&width=56&height=56&seq=testimonial01&orientation=squarish"
-                      alt="User"
-                      className="w-full h-full object-cover object-top"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-[#C4B89A] text-xs font-semibold" style={{ fontFamily: "'Inter', sans-serif" }}>Maya R.</p>
-                    <p className="text-[#6B6355] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>Beta reader</p>
-                  </div>
-                </div>
+                <ul className="space-y-2.5">
+                  {builtFor.map((line) => (
+                    <li key={line} className="flex gap-2 text-[#E8D9C0] text-sm leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <i className="ri-checkbox-circle-line text-[#C4873A] flex-shrink-0 mt-0.5"></i>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
@@ -69,7 +70,7 @@ export default function WhyDifferent() {
                 className="inline-block bg-[#2C2416] text-[#C4B89A] text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6 border border-[#3D3220] w-fit"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Why StoryCast
+                Why AIStoryCast
               </span>
               <h2
                 className="text-3xl md:text-4xl font-bold text-[#E8D9C0] leading-tight mb-4"
@@ -83,7 +84,9 @@ export default function WhyDifferent() {
                 className="text-[#8B7B6B] text-sm leading-relaxed mb-10"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Audiobooks are passive. E-books are lonely. StoryCast is something new — a reading companion that listens, explains, and performs alongside you.
+                Passive audiobooks skim past you. Lonely e-books leave you guessing. AIStoryCast sits in the middle — an
+                early, opinionated demo where narration, synced text, and chat-shaped questions share one canvas built for
+                public-domain classics.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -116,14 +119,14 @@ export default function WhyDifferent() {
                   className="px-6 py-3 bg-[#C4873A] text-white rounded-full text-sm font-semibold hover:bg-[#D4975A] transition-colors cursor-pointer whitespace-nowrap text-center"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  Try the Demo
+                  Preview the Experience
                 </a>
                 <a
                   href="#waitlist"
                   className="px-6 py-3 bg-transparent text-[#C4B89A] rounded-full text-sm font-semibold border border-[#3D3220] hover:border-[#6B6355] transition-colors cursor-pointer whitespace-nowrap text-center"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  Join Waitlist
+                  Get Early Access
                 </a>
               </div>
             </div>

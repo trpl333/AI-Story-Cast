@@ -1,48 +1,51 @@
+import { publicAsset } from "@/lib/publicAsset";
+
+/** Marketing stills vendored under `/public/assets/home`; swap for real product shots when available. */
 const features = [
   {
     icon: "ri-align-left",
     title: "Synced Scrolling Text",
     description:
-      "The page turns itself. Text highlights and scrolls in perfect sync with narration — so your eyes and ears always agree.",
+      "Keep your place without juggling tabs. The text view scrolls with the narration so listening and reading stay in lockstep.",
     color: "#C4873A",
     bg: "#FDF6EC",
-    image: "https://readdy.ai/api/search-image?query=elegant%20dark%20mode%20ebook%20reader%20interface%20with%20highlighted%20text%20scrolling%20animation%2C%20warm%20amber%20accent%20colors%2C%20minimalist%20UI%20design%2C%20clean%20typography%2C%20soft%20glow%20on%20text%2C%20premium%20reading%20app%20mockup%2C%20dark%20background%20with%20cream%20text&width=600&height=400&seq=feat001&orientation=landscape",
+    image: publicAsset("assets/home/feat-01-synced-text.jpg"),
   },
   {
     icon: "ri-user-voice-line",
     title: "Narrator + Character Voices",
     description:
-      "Every character gets their own voice. Assign distinct AI voices to each role and let the story perform itself.",
+      "A storyteller voice carries exposition, while key characters get their own timbre — closer to radio drama than flat TTS.",
     color: "#7A9E7E",
     bg: "#F0F5F0",
-    image: "https://readdy.ai/api/search-image?query=voice%20selection%20UI%20with%20character%20chips%20and%20waveform%20visualizations%2C%20clean%20minimal%20interface%2C%20warm%20neutral%20tones%2C%20audio%20player%20controls%2C%20premium%20app%20design%2C%20soft%20rounded%20cards%2C%20light%20background&width=600&height=400&seq=feat002&orientation=landscape",
+    image: publicAsset("assets/home/feat-02-voices.jpg"),
   },
   {
     icon: "ri-chat-3-line",
-    title: "Pause to Discuss",
+    title: "Discuss or Dissect a Passage",
     description:
-      "Hit pause and ask anything. Dig into themes, vocabulary, historical context — or just check if you understood the plot.",
+      "Pause on a line that puzzles you — themes, wordplay, historical winks — and talk it through without losing the page you’re on.",
     color: "#9B7EC8",
     bg: "#F5F0FA",
-    image: "https://readdy.ai/api/search-image?query=AI%20chat%20interface%20overlaid%20on%20book%20text%2C%20question%20and%20answer%20bubbles%2C%20warm%20minimal%20design%2C%20soft%20purple%20and%20cream%20tones%2C%20premium%20reading%20assistant%20UI%2C%20clean%20typography%2C%20elegant%20layout&width=600&height=400&seq=feat003&orientation=landscape",
+    image: publicAsset("assets/home/feat-03-discuss.jpg"),
   },
   {
     icon: "ri-lightbulb-line",
-    title: "AI Explanations in Plain English",
+    title: "In-context nudges (on the roadmap)",
     description:
-      "No more Googling archaic words. StoryCast explains difficult passages in clear, friendly language — right in context.",
+      "We’re experimenting with short, friendly glosses for dense Victorian phrasing — always optional, always tied to the sentence you’re hearing.",
     color: "#C4873A",
     bg: "#FDF6EC",
-    image: "https://readdy.ai/api/search-image?query=tooltip%20explanation%20popup%20over%20book%20text%2C%20clean%20minimal%20UI%2C%20warm%20amber%20accent%2C%20definition%20card%20with%20soft%20shadow%2C%20premium%20reading%20app%20interface%2C%20elegant%20typography%2C%20light%20cream%20background&width=600&height=400&seq=feat004&orientation=landscape",
+    image: publicAsset("assets/home/feat-04-context.jpg"),
   },
   {
-    icon: "ri-heart-line",
-    title: "Personalized Voice Picks",
+    icon: "ri-book-2-line",
+    title: "Curated public-domain shelf",
     description:
-      "StoryCast learns what you like. The more you listen, the better it gets at recommending voices that match your taste.",
+      "AIStoryCast starts with classics we can share openly. Alice leads the pack today; more curated titles arrive as the pipeline matures.",
     color: "#C4607A",
     bg: "#FAF0F2",
-    image: "https://readdy.ai/api/search-image?query=personalized%20recommendation%20UI%20with%20voice%20profile%20cards%2C%20warm%20rose%20and%20cream%20tones%2C%20minimal%20clean%20design%2C%20user%20preference%20settings%20interface%2C%20premium%20app%20mockup%2C%20soft%20rounded%20cards%2C%20elegant%20layout&width=600&height=400&seq=feat005&orientation=landscape",
+    image: publicAsset("assets/home/feat-05-curated.jpg"),
   },
 ];
 
