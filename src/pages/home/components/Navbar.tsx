@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
+import { useMockAuth } from "@/auth/useMockAuth";
 
 const navLinks = [
   { label: "How it Works", to: "/#how-it-works" },
@@ -12,6 +13,8 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isAuthenticated, signOut } = useMockAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -19,15 +22,21 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleSignOut = () => {
+    signOut();
+    setMenuOpen(false);
+    navigate("/");
+  };
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled ? "bg-[#FAF8F4]/95 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 md:px-10 flex items-center justify-between h-16 md:h-20">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 flex items-center justify-between h-16 md:h-20 gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 cursor-pointer">
+        <Link to="/" className="flex items-center gap-2.5 cursor-pointer shrink-0">
           <img
             src={publicAsset("assets/home/logo.png")}
             alt="AIStoryCast"
@@ -39,7 +48,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex flex-1 items-center justify-end gap-8 min-w-0">
           {navLinks.map((item) => (
             <Link
               key={item.to}
@@ -50,10 +59,47 @@ export default function Navbar() {
               {item.label}
             </Link>
           ))}
+          <div className="h-4 w-px shrink-0 bg-[#D4C9B8]" aria-hidden />
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/app"
+                className="text-sm font-medium text-[#1C1A17] hover:text-[#C4873A] transition-colors whitespace-nowrap"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                App
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-sm font-medium text-[#5C5346] hover:text-[#1C1A17] transition-colors whitespace-nowrap"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm font-medium text-[#5C5346] hover:text-[#1C1A17] transition-colors whitespace-nowrap"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className="text-sm font-medium text-[#C4873A] hover:text-[#A66B2E] transition-colors whitespace-nowrap"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
 
         {/* CTA */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3 shrink-0">
           <Link
             to="/demo"
             className="text-sm font-medium text-[#1C1A17] px-4 py-2 rounded-full border border-[#D4C9B8] hover:bg-[#F0EBE3] transition-colors duration-200 cursor-pointer whitespace-nowrap"
@@ -70,7 +116,7 @@ export default function Navbar() {
 
         {/* Mobile Hamburger */}
         <button
-          className="md:hidden w-9 h-9 flex items-center justify-center cursor-pointer"
+          className="md:hidden w-9 h-9 flex items-center justify-center cursor-pointer shrink-0"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
@@ -91,6 +137,27 @@ export default function Navbar() {
               {item.label}
             </Link>
           ))}
+          <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-[#E8E0D4] pt-3">
+            {isAuthenticated ? (
+              <>
+                <Link to="/app" className="text-sm font-medium text-[#1C1A17]" onClick={() => setMenuOpen(false)}>
+                  App
+                </Link>
+                <button type="button" onClick={handleSignOut} className="text-sm font-medium text-[#5C5346]">
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm font-medium text-[#5C5346]" onClick={() => setMenuOpen(false)}>
+                  Log in
+                </Link>
+                <Link to="/signup" className="text-sm font-medium text-[#C4873A]" onClick={() => setMenuOpen(false)}>
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
           <div className="flex flex-col gap-2 pt-2 border-t border-[#E8E0D4]">
             <Link to="/demo" className="text-sm font-medium text-center text-[#1C1A17] px-4 py-2.5 rounded-full border border-[#D4C9B8] cursor-pointer whitespace-nowrap" onClick={() => setMenuOpen(false)}>
               Preview the Experience

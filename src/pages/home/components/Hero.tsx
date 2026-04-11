@@ -67,7 +67,7 @@ export default function Hero() {
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mb-16">
+        <div className="flex flex-col sm:flex-row items-center gap-4 mb-3">
           <Link
             to="/demo"
             className="px-8 py-3.5 bg-[#2C2416] text-[#FAF8F4] rounded-full font-semibold text-sm hover:bg-[#3D3220] transition-all duration-300 cursor-pointer whitespace-nowrap shadow-lg shadow-[#2C2416]/20"
@@ -83,6 +83,20 @@ export default function Hero() {
             Get Early Access
           </Link>
         </div>
+
+        <p className="mb-16 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <Link to="/signup" className="font-medium text-[#1C1A17] underline decoration-[#C4B89A] underline-offset-4 hover:text-[#C4873A]">
+            Create a free account
+          </Link>
+          <span className="mx-2 text-[#C4B89A]">·</span>
+          <Link to="/login" className="font-medium text-[#1C1A17] underline decoration-[#C4B89A] underline-offset-4 hover:text-[#C4873A]">
+            Log in
+          </Link>
+          <span className="mx-2 text-[#C4B89A]">·</span>
+          <Link to="/app" className="font-medium text-[#1C1A17] underline decoration-[#C4B89A] underline-offset-4 hover:text-[#C4873A]">
+            Open the app
+          </Link>
+        </p>
 
         {/* Floating UI Mockup */}
         <div ref={floatRef} className="w-full max-w-4xl mx-auto">

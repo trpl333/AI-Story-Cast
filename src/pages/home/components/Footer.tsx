@@ -45,6 +45,8 @@ export default function Footer() {
                   { label: "Features", to: "/#features" },
                   { label: "Demo preview", to: "/demo" },
                   { label: "Why Different", to: "/#why-different" },
+                  { label: "Sign in", to: "/login" },
+                  { label: "App library", to: "/app/library" },
                   { label: "Early access", to: "/#waitlist" },
                 ].map((link) => (
                   <li key={link.to}>
