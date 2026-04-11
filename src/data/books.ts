@@ -187,7 +187,7 @@ export const books: Book[] = [
             id: 'p20',
             text: '"There\'s no sort of use in knocking," said the Footman, "and that for two reasons. First, because I\'m on the same side of the door as you are; secondly, because they\'re making such a noise inside, no one could possibly hear you."',
             isDialogue: true,
-            speaker: 'Mad Hatter',
+            speaker: 'Narrator',
           },
           {
             id: 'p21',
@@ -205,7 +205,7 @@ export const books: Book[] = [
             id: 'p23',
             text: '"It\'s a Cheshire cat," said the Duchess, "and that\'s why."',
             isDialogue: true,
-            speaker: 'Queen of Hearts',
+            speaker: 'Narrator',
           },
           {
             id: 'p24',

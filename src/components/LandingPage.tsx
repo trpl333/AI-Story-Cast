@@ -33,7 +33,7 @@ export function LandingPage({ books, onSelectBook }: Props) {
           </h1>
 
           <p className="text-xl sm:text-2xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-4">
-            Not just replayed.{' '}
+            Reading reimagined.{' '}
             <span className="text-white font-medium">Not just replayed.</span>
           </p>
 
