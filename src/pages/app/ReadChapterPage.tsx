@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getSeededChapter } from "@/data/curatedChapters";
+import { fetchDemoAlice, type DemoAliceVoiceRecommendations } from "@/api/demoAlice";
+import { getSeededChapter, type ReaderParagraph } from "@/data/curatedChapters";
+import { getReaderApiBaseUrl } from "@/lib/apiBase";
 
 const voices = [
   { name: "Narrator", color: "#8B7355", icon: "ri-mic-2-line" },
@@ -21,9 +23,100 @@ function progressStorageKey(bookId: string, chapterId: string) {
   return `aistorycast_reader_progress_${bookId}_${chapterId}`;
 }
 
+function voiceTip(vr: DemoAliceVoiceRecommendations | null, active: string): string | null {
+  if (!vr) return null;
+  if (active === "Narrator") return vr.narrator;
+  if (active === "Alice") return vr.alice;
+  if (active === "White Rabbit") return vr.whiteRabbit;
+  return null;
+}
+
+type ReaderView = {
+  bookId: string;
+  chapterId: string;
+  bookTitle: string;
+  author: string;
+  chapterTitle: string;
+  chapterNumberLabel: string;
+  paragraphs: ReaderParagraph[];
+  audioSrc: string;
+  voiceRecommendations: DemoAliceVoiceRecommendations | null;
+  evolvingFeaturesNote: string | null;
+};
+
 export default function ReadChapterPage() {
   const { bookId = "", chapterId = "" } = useParams();
-  const chapter = useMemo(() => getSeededChapter(bookId, chapterId), [bookId, chapterId]);
+  const seededChapter = useMemo(() => getSeededChapter(bookId, chapterId), [bookId, chapterId]);
+  const isAlicePilot = bookId === "alice" && chapterId === "chapter-1";
+
+  const [remote, setRemote] = useState<{
+    status: "idle" | "loading" | "ok" | "error";
+    data: Awaited<ReturnType<typeof fetchDemoAlice>> | null;
+  }>({ status: "idle", data: null });
+
+  useEffect(() => {
+    if (!isAlicePilot) {
+      setRemote({ status: "idle", data: null });
+      return;
+    }
+    let cancelled = false;
+    setRemote({ status: "loading", data: null });
+    void fetchDemoAlice(getReaderApiBaseUrl())
+      .then((data) => {
+        if (!cancelled) setRemote({ status: "ok", data });
+      })
+      .catch(() => {
+        if (!cancelled) setRemote({ status: "error", data: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAlicePilot]);
+
+  const chapter = useMemo((): ReaderView | null => {
+    if (!seededChapter) return null;
+    if (!isAlicePilot) {
+      return {
+        bookId: seededChapter.bookId,
+        chapterId: seededChapter.chapterId,
+        bookTitle: seededChapter.bookTitle,
+        author: "Lewis Carroll",
+        chapterTitle: seededChapter.chapterTitle,
+        chapterNumberLabel: seededChapter.chapterNumberLabel,
+        paragraphs: seededChapter.paragraphs,
+        audioSrc: seededChapter.audioSrc,
+        voiceRecommendations: null,
+        evolvingFeaturesNote: null,
+      };
+    }
+    if (remote.status === "ok" && remote.data) {
+      const p = remote.data;
+      return {
+        bookId: seededChapter.bookId,
+        chapterId: seededChapter.chapterId,
+        bookTitle: p.book.title,
+        author: p.book.author,
+        chapterTitle: p.chapter.title,
+        chapterNumberLabel: p.chapter.chapterNumberLabel,
+        paragraphs: p.paragraphs.map((text) => ({ label: "Narrator", text })),
+        audioSrc: seededChapter.audioSrc,
+        voiceRecommendations: p.voiceRecommendations,
+        evolvingFeaturesNote: p.evolvingFeaturesNote,
+      };
+    }
+    return {
+      bookId: seededChapter.bookId,
+      chapterId: seededChapter.chapterId,
+      bookTitle: seededChapter.bookTitle,
+      author: "Lewis Carroll",
+      chapterTitle: seededChapter.chapterTitle,
+      chapterNumberLabel: seededChapter.chapterNumberLabel,
+      paragraphs: seededChapter.paragraphs,
+      audioSrc: seededChapter.audioSrc,
+      voiceRecommendations: null,
+      evolvingFeaturesNote: null,
+    };
+  }, [seededChapter, isAlicePilot, remote.status, remote.data]);
 
   const [activeVoice, setActiveVoice] = useState<string>("Narrator");
   const [discussDraft, setDiscussDraft] = useState("");
@@ -43,6 +136,9 @@ export default function ReadChapterPage() {
     const idx = PARAGRAPH_END_SEC.findIndex((end) => currentTime < end);
     activeParagraphIndex = idx === -1 ? chapter.paragraphs.length - 1 : idx;
   }
+
+  const showRemoteLoading = isAlicePilot && (remote.status === "loading" || remote.status === "idle");
+  const showRemoteError = isAlicePilot && remote.status === "error";
 
   useEffect(() => {
     if (!chapter) return;
@@ -68,8 +164,7 @@ export default function ReadChapterPage() {
   );
 
   useEffect(() => {
-    const seeded = getSeededChapter(bookId, chapterId);
-    if (!seeded) return;
+    if (!seededChapter) return;
     const el = audioRef.current;
     if (!el) return;
 
@@ -95,7 +190,7 @@ export default function ReadChapterPage() {
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
 
-    el.src = seeded.audioSrc;
+    el.src = seededChapter.audioSrc;
     el.load();
 
     el.addEventListener("loadeddata", onLoaded);
@@ -119,7 +214,7 @@ export default function ReadChapterPage() {
       el.removeEventListener("play", onPlay);
       el.removeEventListener("pause", onPause);
     };
-  }, [bookId, chapterId]);
+  }, [bookId, chapterId, seededChapter]);
 
   const togglePlay = useCallback(async () => {
     const el = audioRef.current;
@@ -183,6 +278,8 @@ export default function ReadChapterPage() {
     );
   }
 
+  const activeTip = voiceTip(chapter.voiceRecommendations, activeVoice);
+
   return (
     <div className="mx-auto max-w-5xl">
       <nav className="mb-6 flex flex-wrap items-center gap-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -207,6 +304,9 @@ export default function ReadChapterPage() {
           <h1 className="mt-1 text-2xl font-bold text-[#1C1A17] md:text-3xl" style={{ fontFamily: "'Playfair Display', serif" }}>
             {chapter.bookTitle}
           </h1>
+          <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {chapter.author}
+          </p>
           <p className="mt-1 text-lg text-[#5C5346]" style={{ fontFamily: "'Playfair Display', serif" }}>
             {chapter.chapterNumberLabel} — {chapter.chapterTitle}
           </p>
@@ -235,6 +335,29 @@ export default function ReadChapterPage() {
         </div>
       </div>
 
+      {showRemoteLoading ? (
+        <div
+          className="mb-4 rounded-xl border border-[#C4B89A]/60 bg-[#FDF6EC] px-4 py-3 text-sm text-[#5C5346]"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+          role="status"
+          aria-live="polite"
+        >
+          Loading chapter text from API ({getReaderApiBaseUrl()})…
+        </div>
+      ) : null}
+
+      {showRemoteError ? (
+        <div
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+          role="alert"
+        >
+          Could not reach the reader API. Showing bundled offline copy. Ensure the backend is running (see{" "}
+          <code className="rounded bg-amber-100/80 px-1">backend/</code>) or set <code className="rounded bg-amber-100/80 px-1">VITE_API_BASE_URL</code> in{" "}
+          <code className="rounded bg-amber-100/80 px-1">.env.local</code>.
+        </div>
+      ) : null}
+
       <div className="mb-4 rounded-xl border border-[#E8E0D4] bg-[#F5F0E8] px-4 py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -259,7 +382,7 @@ export default function ReadChapterPage() {
         <div className="flex flex-col gap-1 border-b border-[#3D3220]/60 px-5 py-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Lewis Carroll · public domain
+              {chapter.author} · public domain
             </p>
             <p className="text-[#E8D9C0] text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif" }}>
               {chapter.chapterNumberLabel}
@@ -292,6 +415,28 @@ export default function ReadChapterPage() {
             </button>
           ))}
         </div>
+
+        {activeTip ? (
+          <div className="border-b border-[#3D3220]/60 px-5 py-3">
+            <p className="text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Voice direction — {activeVoice}
+            </p>
+            <p className="mt-2 text-[#C4B89A] text-sm leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {activeTip}
+            </p>
+          </div>
+        ) : null}
+
+        {chapter.evolvingFeaturesNote ? (
+          <div className="border-b border-[#3D3220]/60 px-5 py-3">
+            <p className="text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Product note
+            </p>
+            <p className="mt-2 text-[#8B7B6B] text-xs leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {chapter.evolvingFeaturesNote}
+            </p>
+          </div>
+        ) : null}
 
         <div className="border-b border-[#3D3220]/60 px-5 py-4">
           <p className="mb-2 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -348,24 +493,33 @@ export default function ReadChapterPage() {
             <p className="mb-4 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
               Text
             </p>
-            <div className="space-y-6 text-left">
-              {chapter.paragraphs.map((block, i) => {
-                const highlight = activeParagraphIndex === i;
-                return (
-                  <div
-                    key={i}
-                    className={`rounded-lg px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/10 ring-1 ring-[#C4873A]/25" : ""}`}
-                  >
-                    <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {block.label}
-                    </p>
-                    <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
-                      {block.text}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
+            {showRemoteLoading ? (
+              <div className="space-y-4" aria-hidden>
+                <div className="h-3 w-1/3 animate-pulse rounded bg-[#3D3220]" />
+                <div className="h-20 animate-pulse rounded-lg bg-[#2C2416]/80" />
+                <div className="h-20 animate-pulse rounded-lg bg-[#2C2416]/80" />
+                <div className="h-16 animate-pulse rounded-lg bg-[#2C2416]/80" />
+              </div>
+            ) : (
+              <div className="space-y-6 text-left">
+                {chapter.paragraphs.map((block, i) => {
+                  const highlight = activeParagraphIndex === i;
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-lg px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/10 ring-1 ring-[#C4873A]/25" : ""}`}
+                    >
+                      <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {block.label}
+                      </p>
+                      <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
+                        {block.text}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col px-5 py-7">
