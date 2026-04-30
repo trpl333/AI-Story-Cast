@@ -5,6 +5,7 @@ type ChapterHelperPayload = {
   chapterText: string;
   voiceStyle: string;
   targetAge: string;
+  readingMode: "enhanced" | "exact";
 };
 
 const WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-chapter-helper";
@@ -14,6 +15,7 @@ const defaultPayload: ChapterHelperPayload = {
   chapterText: "Alice saw a white rabbit.",
   voiceStyle: "warm narrator",
   targetAge: "8",
+  readingMode: "enhanced",
 };
 
 type JsonObject = Record<string, unknown>;
@@ -176,6 +178,23 @@ export default function WebhookTestPage() {
               value={payload.targetAge}
               onChange={(e) => setPayload((prev) => ({ ...prev, targetAge: e.target.value }))}
             />
+          </label>
+
+          <label className="block text-sm text-[#3E372B]">
+            Reading Mode
+            <select
+              className="mt-1 w-full rounded-md border border-[#D9CFBC] bg-white px-3 py-2 text-sm"
+              value={payload.readingMode}
+              onChange={(e) =>
+                setPayload((prev) => ({
+                  ...prev,
+                  readingMode: e.target.value as ChapterHelperPayload["readingMode"],
+                }))
+              }
+            >
+              <option value="enhanced">Enhanced Story Mode</option>
+              <option value="exact">Read Exactly</option>
+            </select>
           </label>
 
           <button
