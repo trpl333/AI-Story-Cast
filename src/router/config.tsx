@@ -10,6 +10,7 @@ import DashboardPage from "../pages/app/DashboardPage";
 import LibraryPage from "../pages/app/LibraryPage";
 import AccountPage from "../pages/app/AccountPage";
 import ReadChapterPage from "../pages/app/ReadChapterPage";
+import WebhookTestPage from "../pages/test/WebhookTestPage";
 
 const routes: RouteObject[] = [
   {
@@ -27,6 +28,10 @@ const routes: RouteObject[] = [
   {
     path: "/signup",
     element: <SignupPage />,
+  },
+  {
+    path: "/webhook-test",
+    element: <WebhookTestPage />,
   },
   {
     path: "/app",
