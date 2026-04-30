@@ -61,9 +61,20 @@ function extractDisplayData(responseJson: unknown): {
   narration: string | null;
   characters: string[];
   imagePrompt: string | null;
+  audioBase64: string | null;
+  audioMimeType: string | null;
+  audioFileName: string | null;
 } {
   if (!isObject(responseJson)) {
-    return { summary: null, narration: null, characters: [], imagePrompt: null };
+    return {
+      summary: null,
+      narration: null,
+      characters: [],
+      imagePrompt: null,
+      audioBase64: null,
+      audioMimeType: null,
+      audioFileName: null,
+    };
   }
 
   const source =
@@ -74,6 +85,9 @@ function extractDisplayData(responseJson: unknown): {
     narration: getStringByKeys(source, ["narration", "narrationText", "storyNarration", "voiceover"]),
     characters: getArrayByKeys(source, ["characters", "characterList", "cast"]),
     imagePrompt: getStringByKeys(source, ["imagePrompt", "image_prompt", "prompt", "artPrompt"]),
+    audioBase64: getStringByKeys(source, ["audioBase64"]),
+    audioMimeType: getStringByKeys(source, ["audioMimeType"]),
+    audioFileName: getStringByKeys(source, ["audioFileName"]),
   };
 }
 
@@ -113,8 +127,10 @@ export default function WebhookTestPage() {
     }
   };
 
-  const { summary, narration, characters, imagePrompt } = extractDisplayData(responseJson);
+  const { summary, narration, characters, imagePrompt, audioBase64, audioMimeType, audioFileName } =
+    extractDisplayData(responseJson);
   const hasStructuredContent = Boolean(summary || narration || imagePrompt || characters.length > 0);
+  const generatedAudioSrc = audioBase64 && audioMimeType ? `data:${audioMimeType};base64,${audioBase64}` : null;
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] px-6 py-10">
@@ -212,6 +228,19 @@ export default function WebhookTestPage() {
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Image Prompt</p>
                 <p className="whitespace-pre-wrap text-sm text-[#2C271F]">{imagePrompt ?? "Not provided in response."}</p>
               </div>
+
+              {generatedAudioSrc ? (
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">
+                    Generated Narration Audio
+                  </p>
+                  {audioFileName ? <p className="mb-2 text-xs text-[#6A5E4B]">{audioFileName}</p> : null}
+                  <audio controls className="w-full">
+                    <source src={generatedAudioSrc} type={audioMimeType ?? undefined} />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              ) : null}
 
               {!hasStructuredContent ? (
                 <p className="text-xs text-[#6A5E4B]">
