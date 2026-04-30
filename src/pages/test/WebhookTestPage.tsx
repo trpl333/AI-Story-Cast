@@ -9,6 +9,7 @@ type ChapterHelperPayload = {
 };
 
 const WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-chapter-helper";
+const IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-generate-scene";
 
 const defaultPayload: ChapterHelperPayload = {
   title: "Alice",
@@ -93,18 +94,35 @@ function extractDisplayData(responseJson: unknown): {
   };
 }
 
+function getSceneImageUrl(value: unknown): string | null {
+  if (!isObject(value)) return null;
+  const url = value.image_url;
+  return typeof url === "string" && url.length > 0 ? url : null;
+}
+
+function getSceneImageFilename(value: unknown): string | null {
+  if (!isObject(value)) return null;
+  const filename = value.filename;
+  return typeof filename === "string" && filename.length > 0 ? filename : null;
+}
+
 export default function WebhookTestPage() {
   const [payload, setPayload] = useState<ChapterHelperPayload>(defaultPayload);
   const [responseJson, setResponseJson] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
+  const [imageResponseJson, setImageResponseJson] = useState<unknown>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
     setResponseJson(null);
+    setImageResponseJson(null);
+    setImageError(null);
 
     try {
       const response = await fetch(WEBHOOK_URL, {
@@ -129,10 +147,45 @@ export default function WebhookTestPage() {
     }
   };
 
+  const onGenerateImage = async () => {
+    if (responseJson == null) return;
+
+    setIsGeneratingImage(true);
+    setImageError(null);
+    setImageResponseJson(null);
+
+    const { imagePrompt: extractedImagePrompt } = extractDisplayData(responseJson);
+    const story_text = extractedImagePrompt || payload.chapterText;
+
+    try {
+      const response = await fetch(IMAGE_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ story_text }),
+      });
+
+      const data = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        setImageError(`Request failed (${response.status} ${response.statusText})`);
+      }
+
+      setImageResponseJson(data);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   const { summary, narration, characters, imagePrompt, audioBase64, audioMimeType, audioFileName } =
     extractDisplayData(responseJson);
   const hasStructuredContent = Boolean(summary || narration || imagePrompt || characters.length > 0);
   const generatedAudioSrc = audioBase64 && audioMimeType ? `data:${audioMimeType};base64,${audioBase64}` : null;
+  const sceneImageUrl = getSceneImageUrl(imageResponseJson);
+  const sceneImageFilename = getSceneImageFilename(imageResponseJson);
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] px-6 py-10">
@@ -280,6 +333,27 @@ export default function WebhookTestPage() {
                   <p className="whitespace-pre-wrap text-sm text-[#2C271F]">
                     {imagePrompt ?? "Not provided in response."}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => void onGenerateImage()}
+                    disabled={isGeneratingImage}
+                    className="mt-3 rounded-md bg-[#C4873A] px-4 py-2 text-sm font-medium text-white hover:bg-[#B9792E] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isGeneratingImage ? "Generating..." : "Generate Scene Image"}
+                  </button>
+                  {imageError ? <p className="mt-2 text-sm text-red-700">{imageError}</p> : null}
+                  {sceneImageUrl ? (
+                    <div className="mt-3">
+                      <img
+                        src={sceneImageUrl}
+                        alt="Generated scene"
+                        className="max-w-full rounded-md border border-[#D9CFBC]"
+                      />
+                      {sceneImageFilename ? (
+                        <p className="mt-2 text-xs text-[#6A5E4B]">{sceneImageFilename}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
