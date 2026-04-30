@@ -8,3 +8,5 @@ backend/.venv/
 backend/venv/
 __pycache__/
 *.py[cod]
+
+out/
