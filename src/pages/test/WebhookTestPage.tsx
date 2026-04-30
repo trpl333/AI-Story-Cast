@@ -134,8 +134,8 @@ export default function WebhookTestPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] px-6 py-10">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <h1 className="text-2xl font-semibold text-[#1C1A17]">n8n Webhook Test</h1>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <h1 className="text-2xl font-semibold text-[#1C1A17]">AIStoryCast Story Screen</h1>
 
         <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
           <label className="block text-sm text-[#3E372B]">
@@ -183,71 +183,103 @@ export default function WebhookTestPage() {
             disabled={isSubmitting}
             className="rounded-md bg-[#C4873A] px-4 py-2 text-sm font-medium text-white hover:bg-[#B9792E] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Sending..." : "Send Test Request"}
+            {isSubmitting ? "Starting..." : "Start Story"}
           </button>
         </form>
 
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
-        <section className="rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-base font-medium text-[#1C1A17]">Response Preview</h2>
-
-          {!responseJson ? (
-            <p className="text-sm text-[#5A5040]">No response yet.</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Summary</p>
-                <p className="text-sm text-[#2C271F]">{summary ?? "Not provided in response."}</p>
-              </div>
-
-              <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Narration</p>
-                <p className="whitespace-pre-wrap text-sm text-[#2C271F]">{narration ?? "Not provided in response."}</p>
-              </div>
-
-              <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Characters</p>
-                {characters.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {characters.map((name) => (
-                      <span
-                        key={name}
-                        className="rounded-full border border-[#D9CFBC] bg-[#F5EFE3] px-2.5 py-1 text-xs font-medium text-[#3E372B]"
-                      >
-                        {name}
-                      </span>
-                    ))}
+        {!responseJson ? (
+          <section className="rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
+            <p className="text-sm text-[#5A5040]">Start a story to open the immersive view.</p>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+              <div className="rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
+                <h2 className="mb-3 text-lg font-semibold text-[#1C1A17]">Open Book</h2>
+                {generatedAudioSrc ? (
+                  <div className="mb-4 rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">
+                      Generated Narration Audio
+                    </p>
+                    {audioFileName ? <p className="mb-2 text-xs text-[#6A5E4B]">{audioFileName}</p> : null}
+                    <audio controls className="w-full">
+                      <source src={generatedAudioSrc} type={audioMimeType ?? undefined} />
+                      Your browser does not support the audio element.
+                    </audio>
                   </div>
-                ) : (
-                  <p className="text-sm text-[#2C271F]">Not provided in response.</p>
-                )}
-              </div>
+                ) : null}
 
-              <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Image Prompt</p>
-                <p className="whitespace-pre-wrap text-sm text-[#2C271F]">{imagePrompt ?? "Not provided in response."}</p>
-              </div>
-
-              {generatedAudioSrc ? (
-                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">
-                    Generated Narration Audio
+                    Generated Narration
                   </p>
-                  {audioFileName ? <p className="mb-2 text-xs text-[#6A5E4B]">{audioFileName}</p> : null}
-                  <audio controls className="w-full">
-                    <source src={generatedAudioSrc} type={audioMimeType ?? undefined} />
-                    Your browser does not support the audio element.
-                  </audio>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#2C271F]">
+                    {narration ?? "Narration is not available in this response yet."}
+                  </p>
                 </div>
-              ) : null}
 
+                <div className="mt-3 rounded-md border border-[#E8DECC] bg-[#FBF7F0] p-3">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#6A5E4B]">
+                    Source Passage
+                  </p>
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#5A5040]">
+                    {payload.chapterText || "No chapter text entered yet."}
+                  </p>
+                </div>
+              </div>
+
+              <aside className="space-y-4 rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
+                <h3 className="text-base font-semibold text-[#1C1A17]">Story Insights</h3>
+
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Summary</p>
+                  <p className="text-sm text-[#2C271F]">{summary ?? "Not provided in response."}</p>
+                </div>
+
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Characters</p>
+                  {characters.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {characters.map((name) => (
+                        <span
+                          key={name}
+                          className="rounded-full border border-[#D9CFBC] bg-[#F5EFE3] px-2.5 py-1 text-xs font-medium text-[#3E372B]"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#2C271F]">Not provided in response.</p>
+                  )}
+                </div>
+
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">Image Prompt</p>
+                  <p className="whitespace-pre-wrap text-sm text-[#2C271F]">
+                    {imagePrompt ?? "Not provided in response."}
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-[#E8DECC] bg-[#FDFBF7] p-3">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]">
+                    Hidden Meaning / Easter Egg
+                  </p>
+                  <p className="text-sm text-[#2C271F]">
+                    Coming soon: AI will reveal themes, symbols, and hidden meaning in this passage.
+                  </p>
+                </div>
+              </aside>
+            </div>
+
+            <section className="rounded-xl border border-[#D9CFBC] bg-white p-5 shadow-sm">
               {!hasStructuredContent ? (
-                <p className="text-xs text-[#6A5E4B]">
+                <p className="mb-3 text-xs text-[#6A5E4B]">
                   Structured keys were not found; use Raw JSON below to inspect the payload shape.
                 </p>
               ) : null}
-
               <div className="rounded-md border border-[#E8DECC] bg-[#FBF7F0] p-3">
                 <button
                   type="button"
@@ -262,9 +294,9 @@ export default function WebhookTestPage() {
                   </pre>
                 ) : null}
               </div>
-            </div>
-          )}
-        </section>
+            </section>
+          </section>
+        )}
       </div>
     </div>
   );
