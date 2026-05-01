@@ -15,6 +15,14 @@ const PARAGRAPH_END_SEC: number[] = [];
 
 const SCENE_IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-generate-scene";
 
+/**
+ * Scene images are rendered with a plain <img src={image_url} /> on pages served over HTTPS.
+ * Browsers block mixed content when image_url is plain HTTP (e.g. raw ComfyUI view URLs).
+ *
+ * Production contract: n8n must return an HTTPS image_url — typically a reverse-proxy or signed
+ * HTTPS URL to the asset — not the direct HTTP URL from the ComfyUI host. This app does not
+ * proxy or fetch HTTP images in the browser; fixing the URL belongs in n8n / infrastructure.
+ */
 type JsonObject = Record<string, unknown>;
 
 function isJsonObject(value: unknown): value is JsonObject {
@@ -659,6 +667,7 @@ export default function ReadChapterPage() {
             <p className="mb-2 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
               Discuss / dissect
             </p>
+            {/* Scene image: expects HTTPS image_url from n8n (see block comment on SCENE_IMAGE_WEBHOOK_URL). */}
             <button
               type="button"
               onClick={() => void generateSceneImage()}
@@ -682,7 +691,9 @@ export default function ReadChapterPage() {
                     referrerPolicy="no-referrer"
                     className="w-full max-w-full rounded-lg border border-[#3D3220] object-cover"
                     onError={() => {
-                      setSceneImageError("The scene image was generated, but the browser could not display it.");
+                      setSceneImageError(
+                        "The scene was generated, but the image URL was blocked by the browser. The image service must return an HTTPS URL.",
+                      );
                       setSceneImageUrl(null);
                     }}
                   />
