@@ -13,6 +13,24 @@ const voices = [
 
 const PARAGRAPH_END_SEC: number[] = [];
 
+const SCENE_IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-generate-scene";
+
+type JsonObject = Record<string, unknown>;
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseSceneImagePayload(value: unknown): { imageUrl: string | null; filename: string | null } {
+  if (!isJsonObject(value)) return { imageUrl: null, filename: null };
+  const imageUrl = value.image_url;
+  const filename = value.filename;
+  return {
+    imageUrl: typeof imageUrl === "string" && imageUrl.length > 0 ? imageUrl : null,
+    filename: typeof filename === "string" && filename.length > 0 ? filename : null,
+  };
+}
+
 function formatTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
   const m = Math.floor(sec / 60);
@@ -128,6 +146,11 @@ export default function ReadChapterPage() {
   const [discussThread, setDiscussThread] = useState<{ from: "you" | "note"; text: string }[]>([]);
   const [readProgressPct, setReadProgressPct] = useState(0);
 
+  const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
+  const [sceneImageFilename, setSceneImageFilename] = useState<string | null>(null);
+  const [sceneImageError, setSceneImageError] = useState<string | null>(null);
+  const [isGeneratingSceneImage, setIsGeneratingSceneImage] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioStatus, setAudioStatus] = useState<"loading" | "ready" | "error">("loading");
   const [playing, setPlaying] = useState(false);
@@ -167,6 +190,55 @@ export default function ReadChapterPage() {
     },
     [chapter],
   );
+
+  useEffect(() => {
+    setSceneImageUrl(null);
+    setSceneImageFilename(null);
+    setSceneImageError(null);
+    setIsGeneratingSceneImage(false);
+  }, [bookId, chapterId]);
+
+  const generateSceneImage = useCallback(async () => {
+    if (!chapter) return;
+    setIsGeneratingSceneImage(true);
+    setSceneImageError(null);
+    setSceneImageUrl(null);
+    setSceneImageFilename(null);
+
+    const firstVisible = chapter.paragraphs[0]?.text ?? "";
+    const story_text = `${chapter.bookTitle}, ${chapter.chapterNumberLabel} — ${chapter.chapterTitle}. Scene: ${firstVisible}`;
+
+    try {
+      const response = await fetch(SCENE_IMAGE_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ story_text }),
+      });
+
+      const data: unknown = await response.json();
+      const { imageUrl, filename } = parseSceneImagePayload(data);
+
+      if (!response.ok) {
+        setSceneImageError(
+          `We couldn’t generate a scene just now (${response.status} ${response.statusText}). Please try again shortly.`,
+        );
+        return;
+      }
+
+      if (imageUrl) {
+        setSceneImageUrl(imageUrl);
+        setSceneImageFilename(filename);
+      } else {
+        setSceneImageError("The service did not return an image. Please try again.");
+      }
+    } catch (err) {
+      setSceneImageError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsGeneratingSceneImage(false);
+    }
+  }, [chapter]);
 
   useEffect(() => {
     if (!seededChapter) return;
@@ -560,7 +632,35 @@ export default function ReadChapterPage() {
             <p className="mb-2 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
               Discuss / dissect
             </p>
-            <div className="min-h-[100px] flex-1 space-y-3 overflow-y-auto rounded-xl border border-[#3D3220] bg-[#2C2416]/50 p-3">
+            <button
+              type="button"
+              onClick={() => void generateSceneImage()}
+              disabled={isGeneratingSceneImage || showRemoteLoading}
+              className="w-full rounded-xl border border-[#3D3220] bg-[#2C2416]/80 px-3 py-2.5 text-xs font-semibold text-[#E8D9C0] transition-colors hover:border-[#C4873A] hover:bg-[#3D3220] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              {isGeneratingSceneImage ? "Generating scene…" : "Show me this scene"}
+            </button>
+            {sceneImageError ? (
+              <p className="mt-2 text-xs leading-relaxed text-amber-200/95" style={{ fontFamily: "'Inter', sans-serif" }}>
+                {sceneImageError}
+              </p>
+            ) : null}
+            {sceneImageUrl ? (
+              <div className="mt-3">
+                <img
+                  src={sceneImageUrl}
+                  alt=""
+                  className="w-full max-w-full rounded-lg border border-[#3D3220] object-cover"
+                />
+                {sceneImageFilename ? (
+                  <p className="mt-2 text-[11px] text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {sceneImageFilename}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="mt-3 min-h-[100px] flex-1 space-y-3 overflow-y-auto rounded-xl border border-[#3D3220] bg-[#2C2416]/50 p-3">
               {discussThread.length === 0 ? (
                 <p className="text-[#6B6355] text-xs italic" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Ask about a line or theme — layout only until the discussion service is connected.
