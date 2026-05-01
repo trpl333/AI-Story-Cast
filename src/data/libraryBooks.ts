@@ -65,14 +65,35 @@ const PRIDE: LibraryBookDisplay = {
   chapters: PLACEHOLDER_CHAPTERS,
 };
 
+const SHERLOCK_CHAPTERS: readonly ChapterListEntry[] = [
+  {
+    chapterId: "chapter-1",
+    label: "Chapter I — A Scandal in Bohemia",
+    hasSeed: true,
+    readerEnabled: true,
+  },
+  {
+    chapterId: "chapter-2",
+    label: "Chapter II",
+    hasSeed: false,
+    readerEnabled: false,
+  },
+  {
+    chapterId: "chapter-3",
+    label: "Chapter III",
+    hasSeed: false,
+    readerEnabled: false,
+  },
+];
+
 const SHERLOCK: LibraryBookDisplay = {
   id: "sherlock",
   title: "The Adventures of Sherlock Holmes",
   author: "Arthur Conan Doyle",
   cover: publicAsset("assets/home/why-different.jpg"),
   description:
-    "Classic detective short stories featuring Holmes and Watson. We will seed selected cases for immersive reading once the catalog pipeline is ready.",
-  chapters: PLACEHOLDER_CHAPTERS,
+    "Classic detective short stories featuring Holmes and Watson. “A Scandal in Bohemia” opens the collection — Chapter I is ready to read; more cases will follow.",
+  chapters: SHERLOCK_CHAPTERS,
 };
 
 const FRANKENSTEIN: LibraryBookDisplay = {

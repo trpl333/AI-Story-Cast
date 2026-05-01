@@ -41,6 +41,7 @@ type ReaderView = {
   chapterNumberLabel: string;
   paragraphs: ReaderParagraph[];
   audioSrc: string;
+  audioNote: string | null;
   voiceRecommendations: DemoAliceVoiceRecommendations | null;
   evolvingFeaturesNote: string | null;
 };
@@ -81,11 +82,12 @@ export default function ReadChapterPage() {
         bookId: seededChapter.bookId,
         chapterId: seededChapter.chapterId,
         bookTitle: seededChapter.bookTitle,
-        author: "Lewis Carroll",
+        author: seededChapter.author,
         chapterTitle: seededChapter.chapterTitle,
         chapterNumberLabel: seededChapter.chapterNumberLabel,
         paragraphs: seededChapter.paragraphs,
         audioSrc: seededChapter.audioSrc,
+        audioNote: seededChapter.audioNote ?? null,
         voiceRecommendations: null,
         evolvingFeaturesNote: null,
       };
@@ -101,6 +103,7 @@ export default function ReadChapterPage() {
         chapterNumberLabel: p.chapter.chapterNumberLabel,
         paragraphs: p.paragraphs.map((text) => ({ label: "Narrator", text })),
         audioSrc: seededChapter.audioSrc,
+        audioNote: seededChapter.audioNote ?? null,
         voiceRecommendations: p.voiceRecommendations,
         evolvingFeaturesNote: p.evolvingFeaturesNote,
       };
@@ -109,11 +112,12 @@ export default function ReadChapterPage() {
       bookId: seededChapter.bookId,
       chapterId: seededChapter.chapterId,
       bookTitle: seededChapter.bookTitle,
-      author: "Lewis Carroll",
+      author: seededChapter.author,
       chapterTitle: seededChapter.chapterTitle,
       chapterNumberLabel: seededChapter.chapterNumberLabel,
       paragraphs: seededChapter.paragraphs,
       audioSrc: seededChapter.audioSrc,
+      audioNote: seededChapter.audioNote ?? null,
       voiceRecommendations: null,
       evolvingFeaturesNote: null,
     };
@@ -467,6 +471,11 @@ export default function ReadChapterPage() {
           <p className="mb-2 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
             Audio
           </p>
+          {chapter.audioNote ? (
+            <p className="mb-3 text-[#8B7B6B] text-xs leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {chapter.audioNote}
+            </p>
+          ) : null}
           <audio ref={audioRef} preload="metadata" className="hidden" />
           {audioStatus === "error" ? (
             <div className="rounded-xl border border-dashed border-[#6B6355]/60 bg-[#2C2416]/60 px-4 py-4">
