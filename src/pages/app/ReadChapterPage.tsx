@@ -21,13 +21,37 @@ function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** n8n often returns `[{ json: { ... } }]` or a bare `{ json: ... }` wrapper. */
+function unwrapSceneImageRoot(value: unknown): JsonObject | null {
+  if (isJsonObject(value)) {
+    if (isJsonObject(value.json)) return value.json;
+    if (isJsonObject(value.body)) return value.body;
+    if (isJsonObject(value.data)) return value.data;
+    return value;
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return unwrapSceneImageRoot(value[0]);
+  }
+  return null;
+}
+
+function readNonEmptyString(obj: JsonObject, keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const v = obj[key];
+    if (typeof v === "string") {
+      const t = v.trim();
+      if (t.length > 0) return t;
+    }
+  }
+  return null;
+}
+
 function parseSceneImagePayload(value: unknown): { imageUrl: string | null; filename: string | null } {
-  if (!isJsonObject(value)) return { imageUrl: null, filename: null };
-  const imageUrl = value.image_url;
-  const filename = value.filename;
+  const root = unwrapSceneImageRoot(value);
+  if (!root) return { imageUrl: null, filename: null };
   return {
-    imageUrl: typeof imageUrl === "string" && imageUrl.length > 0 ? imageUrl : null,
-    filename: typeof filename === "string" && filename.length > 0 ? filename : null,
+    imageUrl: readNonEmptyString(root, ["image_url", "imageUrl", "imageURL"]),
+    filename: readNonEmptyString(root, ["filename", "file_name", "fileName"]),
   };
 }
 
@@ -228,8 +252,11 @@ export default function ReadChapterPage() {
       }
 
       if (imageUrl) {
-        setSceneImageUrl(imageUrl);
+        setSceneImageUrl(imageUrl.trim());
         setSceneImageFilename(filename);
+      } else if (filename) {
+        setSceneImageFilename(filename);
+        setSceneImageError("The service did not return an image URL. Please try again.");
       } else {
         setSceneImageError("The service did not return an image. Please try again.");
       }
@@ -646,15 +673,22 @@ export default function ReadChapterPage() {
                 {sceneImageError}
               </p>
             ) : null}
-            {sceneImageUrl ? (
+            {sceneImageUrl || sceneImageFilename ? (
               <div className="mt-3">
-                <img
-                  src={sceneImageUrl}
-                  alt=""
-                  className="w-full max-w-full rounded-lg border border-[#3D3220] object-cover"
-                />
+                {sceneImageUrl ? (
+                  <img
+                    src={sceneImageUrl}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    className="w-full max-w-full rounded-lg border border-[#3D3220] object-cover"
+                    onError={() => {
+                      setSceneImageError("The scene image was generated, but the browser could not display it.");
+                      setSceneImageUrl(null);
+                    }}
+                  />
+                ) : null}
                 {sceneImageFilename ? (
-                  <p className="mt-2 text-[11px] text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  <p className={`text-[11px] text-[#8B7B6B] ${sceneImageUrl ? "mt-2" : ""}`} style={{ fontFamily: "'Inter', sans-serif" }}>
                     {sceneImageFilename}
                   </p>
                 ) : null}
