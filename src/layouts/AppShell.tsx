@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { publicAsset } from "@/lib/publicAsset";
 import { useAuth } from "@/auth/useAuth";
-import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
+import { libraryBookPath } from "@/data/libraryBooks";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -28,7 +28,7 @@ export default function AppShell() {
         <i className="ri-book-open-line text-lg" aria-hidden />
         Library
       </NavLink>
-      <NavLink to={ALICE_CHAPTER_1_PATH} className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
+      <NavLink to={libraryBookPath("alice")} className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
         <i className="ri-book-read-line text-lg" aria-hidden />
         Reader
       </NavLink>

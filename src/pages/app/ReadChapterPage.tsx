@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchDemoAlice, type DemoAliceVoiceRecommendations } from "@/api/demoAlice";
 import { getSeededChapter, type ReaderParagraph } from "@/data/curatedChapters";
+import { isLibraryBookId, libraryBookPath } from "@/data/libraryBooks";
 import { getReaderApiBaseUrl } from "@/lib/apiBase";
 
 const voices = [
@@ -257,23 +258,35 @@ export default function ReadChapterPage() {
   };
 
   if (!chapter) {
+    const bookBackHref = isLibraryBookId(bookId) ? libraryBookPath(bookId) : "/app/library";
+    const bookBackLabel = isLibraryBookId(bookId) ? "Back to book" : "Back to library";
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-2xl font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Chapter not found
+          Chapter not available yet
         </h1>
         <p className="mt-3 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          There is no seeded content for <code className="text-[#1C1A17]">{bookId}</code> /{" "}
-          <code className="text-[#1C1A17]">{chapterId}</code> yet. Only the curated Alice pilot is wired.
+          There is no reader content seeded for{" "}
+          <code className="text-[#1C1A17]">{bookId || "—"}</code> / <code className="text-[#1C1A17]">{chapterId || "—"}</code> yet.
+          This route is reserved for when narration and text are wired for this chapter.
         </p>
-        <Link
-          to="/app/library"
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#2C2416] px-6 py-3 text-sm font-semibold text-[#FAF8F4] hover:bg-[#3D3220]"
-          style={{ fontFamily: "'Inter', sans-serif" }}
-        >
-          <i className="ri-arrow-left-line" aria-hidden />
-          Back to library
-        </Link>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to={bookBackHref}
+            className="inline-flex items-center gap-2 rounded-full bg-[#2C2416] px-6 py-3 text-sm font-semibold text-[#FAF8F4] hover:bg-[#3D3220]"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            <i className="ri-arrow-left-line" aria-hidden />
+            {bookBackLabel}
+          </Link>
+          <Link
+            to="/app/library"
+            className="inline-flex items-center gap-2 rounded-full border border-[#E0D8CC] bg-white px-6 py-3 text-sm font-semibold text-[#1C1A17] hover:border-[#C4B89A]"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Library
+          </Link>
+        </div>
       </div>
     );
   }
@@ -291,7 +304,13 @@ export default function ReadChapterPage() {
           Library
         </Link>
         <span aria-hidden>/</span>
-        <span className="text-[#1C1A17]">{chapter.bookTitle}</span>
+        {isLibraryBookId(bookId) ? (
+          <Link to={libraryBookPath(bookId)} className="hover:text-[#1C1A17]">
+            {chapter.bookTitle}
+          </Link>
+        ) : (
+          <span className="text-[#1C1A17]">{chapter.bookTitle}</span>
+        )}
         <span aria-hidden>/</span>
         <span className="font-medium text-[#5C5346]">{chapter.chapterNumberLabel}</span>
       </nav>
@@ -388,9 +407,15 @@ export default function ReadChapterPage() {
               {chapter.chapterNumberLabel}
             </p>
           </div>
-          <Link to="/demo" className="text-xs font-medium text-[#C4873A] hover:text-[#E8C99A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Compare public demo →
-          </Link>
+          {isLibraryBookId(bookId) ? (
+            <Link
+              to={libraryBookPath(bookId)}
+              className="text-xs font-medium text-[#C4873A] hover:text-[#E8C99A]"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              Choose another chapter →
+            </Link>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap gap-2 border-b border-[#3D3220]/60 px-5 py-3">

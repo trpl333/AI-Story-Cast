@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
-import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
+import { libraryBookPath } from "@/data/libraryBooks";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
       <div className="mt-10 grid gap-5 md:grid-cols-3">
         <Link
-          to={ALICE_CHAPTER_1_PATH}
+          to={libraryBookPath("alice")}
           className="group rounded-2xl border border-[#E0D8CC] bg-white p-6 shadow-sm transition-all hover:border-[#C4B89A] hover:shadow-md"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDF6EC] text-[#C4873A]">
@@ -30,10 +30,10 @@ export default function DashboardPage() {
             Continue reading
           </h2>
           <p className="mt-2 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Pick up Alice in Wonderland — Chapter I — in the in-app reader (logged-in product path).
+            Open Alice in Wonderland, pick a chapter, and read in the logged-in app reader.
           </p>
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#C4873A] group-hover:gap-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Open reader
+            Open book
             <i className="ri-arrow-right-line" aria-hidden />
           </span>
         </Link>

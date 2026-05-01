@@ -1,63 +1,14 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { publicAsset } from "@/lib/publicAsset";
-import { ALICE_CHAPTER_1_PATH } from "@/data/curatedChapters";
+import {
+  ALICE_LIBRARY_BOOK,
+  CATALOG_LIBRARY_BOOKS,
+  isCatalogBookId,
+  libraryBookPath,
+  type CatalogBookId,
+} from "@/data/libraryBooks";
 
 const STORAGE_KEY = "aistorycast-library-added-catalog";
-
-type CatalogBookId = "pride" | "sherlock" | "frankenstein" | "oz" | "peter";
-
-type CatalogBook = {
-  id: CatalogBookId;
-  title: string;
-  author: string;
-  cover: string;
-};
-
-const ALICE_BOOK = {
-  id: "alice" as const,
-  title: "Alice's Adventures in Wonderland",
-  author: "Lewis Carroll",
-  cover: publicAsset("assets/home/alice-cover.jpg"),
-};
-
-const CATALOG_BOOKS: readonly CatalogBook[] = [
-  {
-    id: "pride",
-    title: "Pride and Prejudice",
-    author: "Jane Austen",
-    cover: publicAsset("assets/home/feat-05-curated.jpg"),
-  },
-  {
-    id: "sherlock",
-    title: "The Adventures of Sherlock Holmes",
-    author: "Arthur Conan Doyle",
-    cover: publicAsset("assets/home/why-different.jpg"),
-  },
-  {
-    id: "frankenstein",
-    title: "Frankenstein",
-    author: "Mary Shelley",
-    cover: publicAsset("assets/home/feat-04-context.jpg"),
-  },
-  {
-    id: "oz",
-    title: "The Wonderful Wizard of Oz",
-    author: "L. Frank Baum",
-    cover: publicAsset("assets/home/feat-02-voices.jpg"),
-  },
-  {
-    id: "peter",
-    title: "Peter Pan",
-    author: "J. M. Barrie",
-    cover: publicAsset("assets/home/feat-01-synced-text.jpg"),
-  },
-];
-
-function isCatalogBookId(value: unknown): value is CatalogBookId {
-  if (typeof value !== "string") return false;
-  return CATALOG_BOOKS.some((b) => b.id === value);
-}
 
 function loadAddedCatalogIds(): CatalogBookId[] {
   if (typeof window === "undefined") return [];
@@ -81,8 +32,8 @@ function saveAddedCatalogIds(ids: readonly CatalogBookId[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
 }
 
-function catalogById(id: CatalogBookId): CatalogBook | undefined {
-  return CATALOG_BOOKS.find((b) => b.id === id);
+function catalogById(id: CatalogBookId) {
+  return CATALOG_LIBRARY_BOOKS.find((b) => b.id === id);
 }
 
 export default function LibraryPage() {
@@ -99,7 +50,7 @@ export default function LibraryPage() {
 
   const addedBooks = addedCatalogIds
     .map((id) => catalogById(id))
-    .filter((b): b is CatalogBook => b !== undefined);
+    .filter((b): b is NonNullable<typeof b> => b !== undefined);
 
   const cardShell =
     "group flex flex-col overflow-hidden rounded-2xl border border-[#E0D8CC] bg-white shadow-sm transition-all hover:border-[#C4B89A]";
@@ -125,12 +76,12 @@ export default function LibraryPage() {
         </h2>
         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            to={ALICE_CHAPTER_1_PATH}
+            to={libraryBookPath("alice")}
             className={`${cardShell} border-[#C4873A]/40 ring-1 ring-[#C4873A]/20`}
           >
             <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
               <img
-                src={ALICE_BOOK.cover}
+                src={ALICE_LIBRARY_BOOK.cover}
                 alt=""
                 className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
               />
@@ -143,19 +94,19 @@ export default function LibraryPage() {
                 Chapter I ready
               </span>
               <h3 className="text-lg font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
-                {ALICE_BOOK.title}
+                {ALICE_LIBRARY_BOOK.title}
               </h3>
               <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                {ALICE_BOOK.author}
+                {ALICE_LIBRARY_BOOK.author}
               </p>
               <span className="mt-4 text-sm font-semibold text-[#C4873A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Continue reading →
+                Open book →
               </span>
             </div>
           </Link>
 
           {addedBooks.map((book) => (
-            <div key={book.id} className={cardShell}>
+            <Link key={book.id} to={libraryBookPath(book.id)} className={cardShell}>
               <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
                 <img
                   src={book.cover}
@@ -176,11 +127,11 @@ export default function LibraryPage() {
                 <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   {book.author}
                 </p>
-                <span className="mt-4 text-sm font-semibold text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Reader coming soon
+                <span className="mt-4 text-sm font-semibold text-[#C4873A]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  View book →
                 </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -193,10 +144,10 @@ export default function LibraryPage() {
           Add a Book
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Tap a title to add it to your shelf. Reader links will arrive as each title is wired into the app.
+          Tap a title to add it to your shelf. Open any book to preview chapters — full reader text ships title by title.
         </p>
         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {CATALOG_BOOKS.map((book) => {
+          {CATALOG_LIBRARY_BOOKS.map((book) => {
             const inLibrary = addedCatalogIds.includes(book.id);
             return (
               <div key={book.id} className={cardShell}>
