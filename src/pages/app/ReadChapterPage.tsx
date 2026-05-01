@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchDemoAlice, type DemoAliceVoiceRecommendations } from "@/api/demoAlice";
-import { getSeededChapter, type ReaderParagraph } from "@/data/curatedChapters";
+import {
+  getSeededChapter,
+  type ReaderParagraph,
+  type StoryRole,
+  type StorySegment,
+} from "@/data/curatedChapters";
 import { isLibraryBookId, libraryBookPath } from "@/data/libraryBooks";
 import { getReaderApiBaseUrl } from "@/lib/apiBase";
 
@@ -163,6 +168,22 @@ function voiceTip(vr: DemoAliceVoiceRecommendations | null, active: string): str
   return null;
 }
 
+/** Label above a paragraph: role display name from cast data when segments align, else seed label. */
+function displayLabelForParagraph(
+  roles: StoryRole[] | undefined,
+  segments: StorySegment[] | undefined,
+  paragraphIndex: number,
+  block: ReaderParagraph,
+): string {
+  if (!roles?.length || !segments?.length) return block.label;
+  const seg =
+    segments.find((s) => s.paragraphIndex === paragraphIndex && s.text === block.text) ??
+    segments.find((s) => s.paragraphIndex === paragraphIndex);
+  if (!seg) return block.label;
+  const role = roles.find((r) => r.id === seg.roleId);
+  return role?.displayName ?? block.label;
+}
+
 type ReaderView = {
   bookId: string;
   chapterId: string;
@@ -175,6 +196,8 @@ type ReaderView = {
   audioNote: string | null;
   voiceRecommendations: DemoAliceVoiceRecommendations | null;
   evolvingFeaturesNote: string | null;
+  roles?: StoryRole[];
+  segments?: StorySegment[];
 };
 
 export default function ReadChapterPage() {
@@ -221,10 +244,23 @@ export default function ReadChapterPage() {
         audioNote: seededChapter.audioNote ?? null,
         voiceRecommendations: null,
         evolvingFeaturesNote: null,
+        roles: seededChapter.roles,
+        segments: seededChapter.segments,
       };
     }
     if (remote.status === "ok" && remote.data) {
       const p = remote.data;
+      const remoteParagraphs = p.paragraphs.map((text) => ({ label: "Narrator", text }));
+      const narratorRoleId = seededChapter.roles?.find((r) => r.roleType === "narrator")?.id;
+      const remoteSegments: StorySegment[] | undefined =
+        narratorRoleId != null
+          ? p.paragraphs.map((text, i) => ({
+              id: `alice-remote-seg-${i}`,
+              roleId: narratorRoleId,
+              text,
+              paragraphIndex: i,
+            }))
+          : undefined;
       return {
         bookId: seededChapter.bookId,
         chapterId: seededChapter.chapterId,
@@ -232,11 +268,13 @@ export default function ReadChapterPage() {
         author: p.book.author,
         chapterTitle: p.chapter.title,
         chapterNumberLabel: p.chapter.chapterNumberLabel,
-        paragraphs: p.paragraphs.map((text) => ({ label: "Narrator", text })),
+        paragraphs: remoteParagraphs,
         audioSrc: seededChapter.audioSrc,
         audioNote: seededChapter.audioNote ?? null,
         voiceRecommendations: p.voiceRecommendations,
         evolvingFeaturesNote: p.evolvingFeaturesNote,
+        roles: seededChapter.roles,
+        segments: remoteSegments,
       };
     }
     return {
@@ -251,6 +289,8 @@ export default function ReadChapterPage() {
       audioNote: seededChapter.audioNote ?? null,
       voiceRecommendations: null,
       evolvingFeaturesNote: null,
+      roles: seededChapter.roles,
+      segments: seededChapter.segments,
     };
   }, [seededChapter, isAlicePilot, remote.status, remote.data]);
 
@@ -576,13 +616,14 @@ export default function ReadChapterPage() {
 
   const renderBookParagraph = (block: ReaderParagraph, globalIndex: number) => {
     const highlight = activeParagraphIndex === globalIndex;
+    const lineLabel = displayLabelForParagraph(chapter.roles, chapter.segments, globalIndex, block);
     return (
       <div
         key={globalIndex}
         className={`mb-6 last:mb-0 rounded-md px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/12 ring-1 ring-[#C4873A]/30" : ""}`}
       >
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          {block.label}
+          {lineLabel}
         </p>
         <p className="text-[#2C271F] text-base leading-relaxed md:text-[17px] md:leading-8" style={{ fontFamily: "'Lora', serif" }}>
           {block.text}
@@ -752,6 +793,42 @@ export default function ReadChapterPage() {
               </Link>
             ) : null}
           </div>
+
+          {chapter.roles && chapter.roles.length > 0 ? (
+            <div className="rounded-xl border border-[#E8E0D4] bg-[#FAF8F4] px-3 py-2.5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                Cast
+              </p>
+              <ul className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {chapter.roles.map((role) => (
+                  <li
+                    key={role.id}
+                    className="min-w-0 flex-1 rounded-lg border border-[#E4D8C8] bg-[#FFFCF7] px-2.5 py-2 shadow-sm sm:max-w-[200px] sm:flex-none"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                      <span className="text-xs font-semibold text-[#3E372B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {role.displayName}
+                      </span>
+                      <span
+                        className="shrink-0 rounded-full bg-[#EDE6DC] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#5C5346]"
+                        style={{ fontFamily: "'Inter', sans-serif" }}
+                      >
+                        {role.roleType === "narrator" ? "Narrator" : "Character"}
+                      </span>
+                    </div>
+                    {role.voiceDescription ? (
+                      <p className="mt-1 text-[11px] leading-snug text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {role.voiceDescription}
+                      </p>
+                    ) : null}
+                    <p className="mt-1.5 text-[10px] font-medium text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {role.voiceId != null && role.voiceId.trim().length > 0 ? "Voice assigned" : "Voice pending"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
