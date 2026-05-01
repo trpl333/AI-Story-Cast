@@ -168,21 +168,17 @@ function voiceTip(vr: DemoAliceVoiceRecommendations | null, active: string): str
   return null;
 }
 
-/** Label above a paragraph: role display name from cast data when segments align, else seed label. */
-function displayLabelForParagraph(
-  roles: StoryRole[] | undefined,
-  segments: StorySegment[] | undefined,
-  paragraphIndex: number,
-  block: ReaderParagraph,
-): string {
-  if (!roles?.length || !segments?.length) return block.label;
-  const seg =
-    segments.find((s) => s.paragraphIndex === paragraphIndex && s.text === block.text) ??
-    segments.find((s) => s.paragraphIndex === paragraphIndex);
-  if (!seg) return block.label;
-  const role = roles.find((r) => r.id === seg.roleId);
-  return role?.displayName ?? block.label;
-}
+/** Resolved row for the open-book UI: from chapter.segments + roles, or synthesized from paragraphs. */
+type ReaderDisplaySegment = {
+  id: string;
+  roleId: string;
+  roleDisplayName: string;
+  roleType: "narrator" | "character";
+  text: string;
+  paragraphIndex: number;
+  startSec?: number;
+  endSec?: number;
+};
 
 type ReaderView = {
   bookId: string;
@@ -199,6 +195,37 @@ type ReaderView = {
   roles?: StoryRole[];
   segments?: StorySegment[];
 };
+
+function buildReaderDisplaySegments(chapter: ReaderView): ReaderDisplaySegment[] {
+  const { paragraphs, segments, roles } = chapter;
+  if (segments != null && segments.length > 0) {
+    const roleById = new Map<string, StoryRole>();
+    for (const r of roles ?? []) {
+      roleById.set(r.id, r);
+    }
+    return segments.map((seg) => {
+      const role = roleById.get(seg.roleId);
+      return {
+        id: seg.id,
+        roleId: seg.roleId,
+        roleDisplayName: role?.displayName ?? seg.roleId,
+        roleType: role?.roleType ?? "narrator",
+        text: seg.text,
+        paragraphIndex: seg.paragraphIndex,
+        startSec: seg.startSec,
+        endSec: seg.endSec,
+      };
+    });
+  }
+  return paragraphs.map((p, i) => ({
+    id: `fallback-para-${i}`,
+    roleId: "",
+    roleDisplayName: p.label,
+    roleType: p.label.trim().toLowerCase() === "narrator" ? "narrator" : "character",
+    text: p.text,
+    paragraphIndex: i,
+  }));
+}
 
 export default function ReadChapterPage() {
   const { bookId = "", chapterId = "" } = useParams();
@@ -565,6 +592,8 @@ export default function ReadChapterPage() {
     setDiscussDraft("");
   };
 
+  const displaySegments = useMemo(() => (chapter ? buildReaderDisplaySegments(chapter) : []), [chapter]);
+
   if (!chapter) {
     const bookBackHref = isLibraryBookId(bookId) ? libraryBookPath(bookId) : "/app/library";
     const bookBackLabel = isLibraryBookId(bookId) ? "Back to book" : "Back to library";
@@ -610,23 +639,25 @@ export default function ReadChapterPage() {
   const chapterHasPlaceholderAudioNote = Boolean(chapter.audioNote && chapter.audioNote.trim().length > 0);
   const showBundledChapterNarrationPlayer = isAlicePilot || !chapterHasPlaceholderAudioNote;
 
-  const leftPageCount = Math.ceil(chapter.paragraphs.length / 2);
-  const leftParas = chapter.paragraphs.slice(0, leftPageCount);
-  const rightParas = chapter.paragraphs.slice(leftPageCount);
+  const leftPageSegCount = Math.ceil(displaySegments.length / 2);
+  const leftSegs = displaySegments.slice(0, leftPageSegCount);
+  const rightSegs = displaySegments.slice(leftPageSegCount);
 
-  const renderBookParagraph = (block: ReaderParagraph, globalIndex: number) => {
-    const highlight = activeParagraphIndex === globalIndex;
-    const lineLabel = displayLabelForParagraph(chapter.roles, chapter.segments, globalIndex, block);
+  const renderDisplaySegment = (seg: ReaderDisplaySegment) => {
+    const highlight = activeParagraphIndex === seg.paragraphIndex;
+    const roleAttr = seg.roleId.length > 0 ? seg.roleId : "fallback";
     return (
       <div
-        key={globalIndex}
+        key={seg.id}
+        data-segment-id={seg.id}
+        data-role-id={roleAttr}
         className={`mb-6 last:mb-0 rounded-md px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/12 ring-1 ring-[#C4873A]/30" : ""}`}
       >
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          {lineLabel}
+          {seg.roleDisplayName}
         </p>
         <p className="text-[#2C271F] text-base leading-relaxed md:text-[17px] md:leading-8" style={{ fontFamily: "'Lora', serif" }}>
-          {block.text}
+          {seg.text}
         </p>
       </div>
     );
@@ -988,7 +1019,7 @@ export default function ReadChapterPage() {
                   <div className="h-20 animate-pulse rounded-lg bg-[#F0E8DC]" />
                 </div>
               ) : (
-                <div className="text-left">{leftParas.map((b, j) => renderBookParagraph(b, j))}</div>
+                <div className="text-left">{leftSegs.map((seg) => renderDisplaySegment(seg))}</div>
               )}
             </div>
             <div className="min-h-[12rem] flex-1 rounded-xl border border-[#E4D8C8] bg-[#FDF9F3] px-5 py-6 shadow-[2px_4px_18px_rgba(50,42,32,0.06)] lg:rounded-none lg:border-0 lg:shadow-none lg:rounded-r-xl">
@@ -998,8 +1029,8 @@ export default function ReadChapterPage() {
                   <div className="h-16 animate-pulse rounded-lg bg-[#F0E8DC]" />
                   <div className="h-24 animate-pulse rounded-lg bg-[#F0E8DC]" />
                 </div>
-              ) : rightParas.length > 0 ? (
-                <div className="text-left">{rightParas.map((b, j) => renderBookParagraph(b, leftPageCount + j))}</div>
+              ) : rightSegs.length > 0 ? (
+                <div className="text-left">{rightSegs.map((seg) => renderDisplaySegment(seg))}</div>
               ) : (
                 <p className="text-sm italic text-[#9A8E7D]" style={{ fontFamily: "'Lora', serif" }}>
                   This chapter fits on a single page for now — the next spread will appear as the catalog grows.
