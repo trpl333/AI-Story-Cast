@@ -354,7 +354,7 @@ export default function ReadChapterPage() {
 
       if (!response.ok) {
         setHelperError(
-          `Enhanced narration request failed (${response.status} ${response.statusText}). You can try again shortly.`,
+          `Enhanced storytelling request failed (${response.status} ${response.statusText}). You can try again shortly.`,
         );
       }
 
@@ -536,7 +536,7 @@ export default function ReadChapterPage() {
         <p className="mt-3 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
           There is no reader content seeded for{" "}
           <code className="text-[#1C1A17]">{bookId || "—"}</code> / <code className="text-[#1C1A17]">{chapterId || "—"}</code> yet.
-          This route is reserved for when narration and text are wired for this chapter.
+          This route is reserved for when storytelling and text are wired for this chapter.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -682,7 +682,7 @@ export default function ReadChapterPage() {
                 className="w-full rounded-lg bg-[#C4873A] px-3 py-2 text-sm font-semibold text-white hover:bg-[#B9792E] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                {isRunningHelper ? "Generating…" : "Generate enhanced narration"}
+                {isRunningHelper ? "Generating…" : "Generate storytelling"}
               </button>
             ) : null}
             {helperError ? (
@@ -757,6 +757,9 @@ export default function ReadChapterPage() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
               Voice focus
             </p>
+            <p className="mb-2 text-xs leading-relaxed text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              AIStoryCast can use a narrator plus character voices when cast data is available.
+            </p>
             <div className="flex flex-wrap gap-2">
               {voices.map((v) => (
                 <button
@@ -804,7 +807,7 @@ export default function ReadChapterPage() {
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Narration
+              Storytelling
             </p>
             {showBundledChapterNarrationPlayer ? (
               <>
@@ -861,11 +864,11 @@ export default function ReadChapterPage() {
             ) : (
               <div className="rounded-xl border border-[#E8E0D4] bg-[#FAF8F4] px-3 py-3">
                 <p className="text-sm text-[#3E372B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Narration for this chapter has not been generated yet.
+                  Storytelling audio for this chapter has not been generated yet.
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  For AI-assisted narration, open <strong className="font-semibold text-[#3E372B]">Enhanced Story Mode</strong> in the header, then run{" "}
-                  <strong className="font-semibold text-[#3E372B]">Generate enhanced narration</strong> when you are ready to call the helper workflow.
+                  For AI-assisted storytelling, open <strong className="font-semibold text-[#3E372B]">Enhanced Story Mode</strong> in the header, then run{" "}
+                  <strong className="font-semibold text-[#3E372B]">Generate storytelling</strong> when you are ready to call the helper workflow.
                 </p>
               </div>
             )}
@@ -876,7 +879,7 @@ export default function ReadChapterPage() {
       {showEnhancedNarrationBlock ? (
         <div className="mb-6 rounded-2xl border border-[#E0D8CC] bg-[#FDFBF7] p-5 shadow-sm">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Generated narration
+            Generated Storytelling
           </p>
           <p className="whitespace-pre-wrap text-[#2C271F] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
             {helperParsed.narration}
@@ -884,7 +887,7 @@ export default function ReadChapterPage() {
           {helperGeneratedAudioSrc ? (
             <div className="mt-4 border-t border-[#E8E0D4] pt-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Enhanced narration audio
+                Enhanced storytelling audio
               </p>
               <audio ref={helperAudioRef} controls className="w-full rounded-md border border-[#E8E0D4] bg-white" preload="metadata" />
               {helperParsed.audioFileName ? (
@@ -1023,7 +1026,7 @@ export default function ReadChapterPage() {
               <div className="mb-4 rounded-xl border border-dashed border-[#E0D8CC] bg-[#FFFCF7] px-3 py-3">
                 <p className="text-xs leading-relaxed text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Switch to <strong className="font-semibold text-[#3E372B]">Enhanced Story Mode</strong> and run{" "}
-                  <strong className="font-semibold text-[#3E372B]">Generate enhanced narration</strong> to populate summary, characters, and the image prompt used for
+                  <strong className="font-semibold text-[#3E372B]">Generate storytelling</strong> to populate summary, characters, and the image prompt used for
                   scenes.
                 </p>
               </div>
