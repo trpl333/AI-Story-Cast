@@ -425,6 +425,15 @@ export default function ReadChapterPage() {
 
   useEffect(() => {
     if (!seededChapter) return;
+    const hasPlaceholderAudioNote = Boolean(seededChapter.audioNote && seededChapter.audioNote.trim().length > 0);
+    const shouldLoadBundledChapterAudio = isAlicePilot || !hasPlaceholderAudioNote;
+    if (!shouldLoadBundledChapterAudio) {
+      setAudioStatus("loading");
+      setPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      return;
+    }
     const el = audioRef.current;
     if (!el) return;
 
@@ -474,7 +483,7 @@ export default function ReadChapterPage() {
       el.removeEventListener("play", onPlay);
       el.removeEventListener("pause", onPause);
     };
-  }, [bookId, chapterId, seededChapter]);
+  }, [bookId, chapterId, seededChapter, isAlicePilot]);
 
   const togglePlay = useCallback(async () => {
     const el = audioRef.current;
@@ -557,6 +566,9 @@ export default function ReadChapterPage() {
     typeof helperParsed.narration === "string" &&
     helperParsed.narration.trim().length > 0;
   const showStoryInsightsPanel = readingMode === "enhanced" && helperResponseJson !== null;
+
+  const chapterHasPlaceholderAudioNote = Boolean(chapter.audioNote && chapter.audioNote.trim().length > 0);
+  const showBundledChapterNarrationPlayer = isAlicePilot || !chapterHasPlaceholderAudioNote;
 
   const leftPageCount = Math.ceil(chapter.paragraphs.length / 2);
   const leftParas = chapter.paragraphs.slice(0, leftPageCount);
@@ -794,53 +806,67 @@ export default function ReadChapterPage() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
               Narration
             </p>
-            {chapter.audioNote ? (
-              <p className="mb-2 text-xs leading-relaxed text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                {chapter.audioNote}
-              </p>
-            ) : null}
-            <audio ref={audioRef} preload="metadata" className="hidden" />
-            {audioStatus === "error" ? (
-              <div className="rounded-xl border border-dashed border-amber-300/80 bg-amber-50/90 px-4 py-3">
-                <p className="text-sm text-amber-950" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Audio unavailable — add <code className="rounded bg-amber-100 px-1 text-xs">public/assets/demo/chapter1.mp3</code> or wire a chapter asset from the API later.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-[#E8E0D4] bg-[#FAF8F4] px-3 py-2.5">
-                {audioStatus === "loading" ? (
-                  <p className="mb-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    Loading audio…
+            {showBundledChapterNarrationPlayer ? (
+              <>
+                {chapter.audioNote ? (
+                  <p className="mb-2 text-xs leading-relaxed text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {chapter.audioNote}
                   </p>
                 ) : null}
-                <div className={`flex items-center gap-3 ${audioStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}>
-                  <button
-                    type="button"
-                    onClick={() => void togglePlay()}
-                    disabled={audioStatus !== "ready"}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C4873A] text-white hover:bg-[#D4975A] disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={playing ? "Pause" : "Play"}
-                  >
-                    <i className={`${playing ? "ri-pause-fill" : "ri-play-fill"} text-base`} aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 cursor-pointer items-center rounded-md py-1.5 text-left disabled:cursor-not-allowed"
-                    onClick={seekFromBar}
-                    disabled={audioStatus !== "ready" || !duration}
-                    aria-label="Seek audio"
-                  >
-                    <div className="pointer-events-none h-1.5 w-full overflow-hidden rounded-full bg-[#E0D4C4]">
-                      <div
-                        className="h-full rounded-full bg-[#C4873A] transition-[width] duration-150 ease-linear"
-                        style={{ width: `${progressPct}%` }}
-                      />
+                <audio ref={audioRef} preload="metadata" className="hidden" />
+                {audioStatus === "error" ? (
+                  <div className="rounded-xl border border-dashed border-amber-300/80 bg-amber-50/90 px-4 py-3">
+                    <p className="text-sm text-amber-950" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Audio unavailable — add <code className="rounded bg-amber-100 px-1 text-xs">public/assets/demo/chapter1.mp3</code> or wire a chapter asset from the API later.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-[#E8E0D4] bg-[#FAF8F4] px-3 py-2.5">
+                    {audioStatus === "loading" ? (
+                      <p className="mb-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        Loading audio…
+                      </p>
+                    ) : null}
+                    <div className={`flex items-center gap-3 ${audioStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => void togglePlay()}
+                        disabled={audioStatus !== "ready"}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C4873A] text-white hover:bg-[#D4975A] disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={playing ? "Pause" : "Play"}
+                      >
+                        <i className={`${playing ? "ri-pause-fill" : "ri-play-fill"} text-base`} aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 cursor-pointer items-center rounded-md py-1.5 text-left disabled:cursor-not-allowed"
+                        onClick={seekFromBar}
+                        disabled={audioStatus !== "ready" || !duration}
+                        aria-label="Seek audio"
+                      >
+                        <div className="pointer-events-none h-1.5 w-full overflow-hidden rounded-full bg-[#E0D4C4]">
+                          <div
+                            className="h-full rounded-full bg-[#C4873A] transition-[width] duration-150 ease-linear"
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </button>
+                      <span className="shrink-0 text-[11px] tabular-nums text-[#6A5E4B] whitespace-nowrap" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {formatTime(currentTime)} / {duration > 0 ? formatTime(duration) : "—"}
+                      </span>
                     </div>
-                  </button>
-                  <span className="shrink-0 text-[11px] tabular-nums text-[#6A5E4B] whitespace-nowrap" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {formatTime(currentTime)} / {duration > 0 ? formatTime(duration) : "—"}
-                  </span>
-                </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-xl border border-[#E8E0D4] bg-[#FAF8F4] px-3 py-3">
+                <p className="text-sm text-[#3E372B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Narration for this chapter has not been generated yet.
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-[#7A6E5E]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  For AI-assisted narration, open <strong className="font-semibold text-[#3E372B]">Enhanced Story Mode</strong> in the header, then run{" "}
+                  <strong className="font-semibold text-[#3E372B]">Generate enhanced narration</strong> when you are ready to call the helper workflow.
+                </p>
               </div>
             )}
           </div>
