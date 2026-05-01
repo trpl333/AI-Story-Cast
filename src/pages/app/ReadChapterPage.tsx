@@ -22,51 +22,13 @@ const SCENE_IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistoryca
 const CHAPTER_HELPER_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-chapter-helper";
 
 /**
- * Scene images are rendered with a plain <img src={image_url} /> on pages served over HTTPS.
- * Browsers block mixed content when image_url is plain HTTP (e.g. raw ComfyUI view URLs).
- *
- * Production contract: n8n must return an HTTPS image_url — typically a reverse-proxy or signed
- * HTTPS URL to the asset — not the direct HTTP URL from the ComfyUI host. This app does not
- * proxy or fetch HTTP images in the browser; fixing the URL belongs in n8n / infrastructure.
+ * Scene image webhook: n8n “Respond to Webhook” returns the PNG body directly (image/png).
+ * The client uses response.blob() and URL.createObjectURL — not JSON.
  */
 type JsonObject = Record<string, unknown>;
 
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** n8n often returns `[{ json: { ... } }]` or a bare `{ json: ... }` wrapper. */
-function unwrapSceneImageRoot(value: unknown): JsonObject | null {
-  if (isJsonObject(value)) {
-    if (isJsonObject(value.json)) return value.json;
-    if (isJsonObject(value.body)) return value.body;
-    if (isJsonObject(value.data)) return value.data;
-    return value;
-  }
-  if (Array.isArray(value) && value.length > 0) {
-    return unwrapSceneImageRoot(value[0]);
-  }
-  return null;
-}
-
-function readNonEmptyString(obj: JsonObject, keys: readonly string[]): string | null {
-  for (const key of keys) {
-    const v = obj[key];
-    if (typeof v === "string") {
-      const t = v.trim();
-      if (t.length > 0) return t;
-    }
-  }
-  return null;
-}
-
-function parseSceneImagePayload(value: unknown): { imageUrl: string | null; filename: string | null } {
-  const root = unwrapSceneImageRoot(value);
-  if (!root) return { imageUrl: null, filename: null };
-  return {
-    imageUrl: readNonEmptyString(root, ["image_url", "imageUrl", "imageURL"]),
-    filename: readNonEmptyString(root, ["filename", "file_name", "fileName"]),
-  };
 }
 
 function helperToStringArray(value: unknown): string[] {
@@ -330,6 +292,14 @@ export default function ReadChapterPage() {
   const [sceneImageFilename, setSceneImageFilename] = useState<string | null>(null);
   const [sceneImageError, setSceneImageError] = useState<string | null>(null);
   const [isGeneratingSceneImage, setIsGeneratingSceneImage] = useState(false);
+  const sceneImageObjectUrlRef = useRef<string | null>(null);
+
+  const revokeSceneImageObjectUrl = useCallback(() => {
+    if (sceneImageObjectUrlRef.current) {
+      URL.revokeObjectURL(sceneImageObjectUrlRef.current);
+      sceneImageObjectUrlRef.current = null;
+    }
+  }, []);
 
   const [readingMode, setReadingMode] = useState<"enhanced" | "exact">("exact");
   const [helperResponseJson, setHelperResponseJson] = useState<unknown>(null);
@@ -384,6 +354,7 @@ export default function ReadChapterPage() {
   );
 
   useEffect(() => {
+    revokeSceneImageObjectUrl();
     setSceneImageUrl(null);
     setSceneImageFilename(null);
     setSceneImageError(null);
@@ -392,7 +363,13 @@ export default function ReadChapterPage() {
     setHelperError(null);
     setIsRunningHelper(false);
     setReadingMode("exact");
-  }, [bookId, chapterId]);
+  }, [bookId, chapterId, revokeSceneImageObjectUrl]);
+
+  useEffect(() => {
+    return () => {
+      revokeSceneImageObjectUrl();
+    };
+  }, [revokeSceneImageObjectUrl]);
 
   const runChapterHelper = useCallback(async () => {
     if (!chapter) return;
@@ -437,6 +414,7 @@ export default function ReadChapterPage() {
     if (!chapter) return;
     setIsGeneratingSceneImage(true);
     setSceneImageError(null);
+    revokeSceneImageObjectUrl();
     setSceneImageUrl(null);
     setSceneImageFilename(null);
 
@@ -457,31 +435,45 @@ export default function ReadChapterPage() {
         body: JSON.stringify({ story_text }),
       });
 
-      const data: unknown = await response.json();
-      const { imageUrl, filename } = parseSceneImagePayload(data);
-
       if (!response.ok) {
-        setSceneImageError(
-          `We couldn’t generate a scene just now (${response.status} ${response.statusText}). Please try again shortly.`,
-        );
+        const errorText = await response.text().catch(() => "");
+        const detail = errorText.trim().length > 0 ? ` ${errorText.slice(0, 400)}` : "";
+        setSceneImageError(`Scene image request failed: ${response.status} ${response.statusText}${detail}`.trim());
         return;
       }
 
-      if (imageUrl) {
-        setSceneImageUrl(imageUrl.trim());
-        setSceneImageFilename(filename);
-      } else if (filename) {
-        setSceneImageFilename(filename);
-        setSceneImageError("The service did not return an image URL. Please try again.");
-      } else {
-        setSceneImageError("The service did not return an image. Please try again.");
+      const imageBlob = await response.blob();
+      if (imageBlob.size === 0) {
+        setSceneImageError("The service returned an empty image.");
+        return;
       }
+
+      const imageUrl = URL.createObjectURL(imageBlob);
+      sceneImageObjectUrlRef.current = imageUrl;
+      setSceneImageUrl(imageUrl);
+
+      const cd = response.headers.get("Content-Disposition");
+      let filename: string | null = null;
+      if (cd) {
+        const star = /filename\*=UTF-8''([^;\s]+)/i.exec(cd);
+        const quoted = /filename="([^"]+)"/i.exec(cd);
+        const plain = /filename=([^;\s]+)/i.exec(cd);
+        const raw = star?.[1] ?? quoted?.[1] ?? plain?.[1];
+        if (raw) {
+          try {
+            filename = decodeURIComponent(raw.replace(/^"|"$/g, ""));
+          } catch {
+            filename = raw.replace(/^"|"$/g, "");
+          }
+        }
+      }
+      setSceneImageFilename(filename);
     } catch (err) {
       setSceneImageError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsGeneratingSceneImage(false);
     }
-  }, [chapter, helperResponseJson]);
+  }, [chapter, helperResponseJson, revokeSceneImageObjectUrl]);
 
   useEffect(() => {
     const el = helperAudioRef.current;
@@ -1045,7 +1037,7 @@ export default function ReadChapterPage() {
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#6A5E4B]" style={{ fontFamily: "'Inter', sans-serif" }}>
               Scene image
             </h2>
-            {/* Scene image: expects HTTPS image_url from n8n (see block comment on SCENE_IMAGE_WEBHOOK_URL). */}
+            {/* Scene image: n8n returns PNG bytes; see SCENE_IMAGE_WEBHOOK_URL comment. */}
             <button
               type="button"
               onClick={() => void generateSceneImage()}
@@ -1069,9 +1061,8 @@ export default function ReadChapterPage() {
                     referrerPolicy="no-referrer"
                     className="w-full max-w-full rounded-lg border border-[#E8E0D4] object-cover shadow-sm"
                     onError={() => {
-                      setSceneImageError(
-                        "The scene was generated, but the image URL was blocked by the browser. The image service must return an HTTPS URL.",
-                      );
+                      setSceneImageError("The scene image failed to display in the browser.");
+                      revokeSceneImageObjectUrl();
                       setSceneImageUrl(null);
                     }}
                   />
