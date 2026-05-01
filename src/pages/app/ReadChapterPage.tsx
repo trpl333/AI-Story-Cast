@@ -14,6 +14,7 @@ const voices = [
 const PARAGRAPH_END_SEC: number[] = [];
 
 const SCENE_IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-generate-scene";
+const CHAPTER_HELPER_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-chapter-helper";
 
 /**
  * Scene images are rendered with a plain <img src={image_url} /> on pages served over HTTPS.
@@ -60,6 +61,86 @@ function parseSceneImagePayload(value: unknown): { imageUrl: string | null; file
   return {
     imageUrl: readNonEmptyString(root, ["image_url", "imageUrl", "imageURL"]),
     filename: readNonEmptyString(root, ["filename", "file_name", "fileName"]),
+  };
+}
+
+function helperToStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : ""))
+      .filter((item) => item.length > 0);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+  return [];
+}
+
+function helperGetStringByKeys(obj: JsonObject, keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim().length > 0) return value;
+  }
+  return null;
+}
+
+function helperGetArrayByKeys(obj: JsonObject, keys: readonly string[]): string[] {
+  for (const key of keys) {
+    const value = obj[key];
+    const arr = helperToStringArray(value);
+    if (arr.length > 0) return arr;
+  }
+  return [];
+}
+
+/** Unwrap n8n chapter-helper payloads (flat, array, json/data/output). */
+function unwrapChapterHelperRoot(value: unknown): JsonObject | null {
+  if (isJsonObject(value)) {
+    if (isJsonObject(value.data)) return value.data;
+    if (isJsonObject(value.output)) return value.output;
+    if (isJsonObject(value.json)) return value.json;
+    if (isJsonObject(value.body)) return value.body;
+    return value;
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return unwrapChapterHelperRoot(value[0]);
+  }
+  return null;
+}
+
+type ChapterHelperParsed = {
+  summary: string | null;
+  narration: string | null;
+  characters: string[];
+  imagePrompt: string | null;
+  audioBase64: string | null;
+  audioMimeType: string | null;
+  audioFileName: string | null;
+};
+
+function extractChapterHelperDisplay(responseJson: unknown): ChapterHelperParsed {
+  const empty: ChapterHelperParsed = {
+    summary: null,
+    narration: null,
+    characters: [],
+    imagePrompt: null,
+    audioBase64: null,
+    audioMimeType: null,
+    audioFileName: null,
+  };
+  const source = unwrapChapterHelperRoot(responseJson);
+  if (!source) return empty;
+  return {
+    summary: helperGetStringByKeys(source, ["summary", "storySummary", "chapterSummary"]),
+    narration: helperGetStringByKeys(source, ["narration", "narrationText", "storyNarration", "voiceover"]),
+    characters: helperGetArrayByKeys(source, ["characters", "characterList", "cast"]),
+    imagePrompt: helperGetStringByKeys(source, ["imagePrompt", "image_prompt", "prompt", "artPrompt"]),
+    audioBase64: helperGetStringByKeys(source, ["audioBase64"]),
+    audioMimeType: helperGetStringByKeys(source, ["audioMimeType"]),
+    audioFileName: helperGetStringByKeys(source, ["audioFileName"]),
   };
 }
 
@@ -183,7 +264,19 @@ export default function ReadChapterPage() {
   const [sceneImageError, setSceneImageError] = useState<string | null>(null);
   const [isGeneratingSceneImage, setIsGeneratingSceneImage] = useState(false);
 
+  const [readingMode, setReadingMode] = useState<"enhanced" | "exact">("exact");
+  const [helperResponseJson, setHelperResponseJson] = useState<unknown>(null);
+  const [helperError, setHelperError] = useState<string | null>(null);
+  const [isRunningHelper, setIsRunningHelper] = useState(false);
+
+  const helperParsed = useMemo(() => extractChapterHelperDisplay(helperResponseJson), [helperResponseJson]);
+  const helperGeneratedAudioSrc =
+    helperParsed.audioBase64 && helperParsed.audioMimeType
+      ? `data:${helperParsed.audioMimeType};base64,${helperParsed.audioBase64}`
+      : null;
+
   const audioRef = useRef<HTMLAudioElement>(null);
+  const helperAudioRef = useRef<HTMLAudioElement>(null);
   const [audioStatus, setAudioStatus] = useState<"loading" | "ready" | "error">("loading");
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -228,7 +321,50 @@ export default function ReadChapterPage() {
     setSceneImageFilename(null);
     setSceneImageError(null);
     setIsGeneratingSceneImage(false);
+    setHelperResponseJson(null);
+    setHelperError(null);
+    setIsRunningHelper(false);
+    setReadingMode("exact");
   }, [bookId, chapterId]);
+
+  const runChapterHelper = useCallback(async () => {
+    if (!chapter) return;
+    setIsRunningHelper(true);
+    setHelperError(null);
+    setHelperResponseJson(null);
+
+    const body = {
+      title: chapter.bookTitle,
+      chapterText: chapter.paragraphs.map((p) => p.text).join("\n\n"),
+      voiceStyle: "warm narrator",
+      targetAge: "8",
+      readingMode,
+    };
+
+    try {
+      const response = await fetch(CHAPTER_HELPER_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data: unknown = await response.json();
+
+      if (!response.ok) {
+        setHelperError(
+          `Enhanced narration request failed (${response.status} ${response.statusText}). You can try again shortly.`,
+        );
+      }
+
+      setHelperResponseJson(data);
+    } catch (err) {
+      setHelperError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsRunningHelper(false);
+    }
+  }, [chapter, readingMode]);
 
   const generateSceneImage = useCallback(async () => {
     if (!chapter) return;
@@ -237,8 +373,13 @@ export default function ReadChapterPage() {
     setSceneImageUrl(null);
     setSceneImageFilename(null);
 
+    const helperForScene = extractChapterHelperDisplay(helperResponseJson);
+    const prompt = helperForScene.imagePrompt?.trim() ?? "";
     const firstVisible = chapter.paragraphs[0]?.text ?? "";
-    const story_text = `${chapter.bookTitle}, ${chapter.chapterNumberLabel} — ${chapter.chapterTitle}. Scene: ${firstVisible}`;
+    const story_text =
+      prompt.length > 0
+        ? prompt
+        : `${chapter.bookTitle}, ${chapter.chapterNumberLabel} — ${chapter.chapterTitle}. Scene: ${firstVisible}`;
 
     try {
       const response = await fetch(SCENE_IMAGE_WEBHOOK_URL, {
@@ -273,7 +414,14 @@ export default function ReadChapterPage() {
     } finally {
       setIsGeneratingSceneImage(false);
     }
-  }, [chapter]);
+  }, [chapter, helperResponseJson]);
+
+  useEffect(() => {
+    const el = helperAudioRef.current;
+    if (!el || !helperGeneratedAudioSrc) return;
+    el.src = helperGeneratedAudioSrc;
+    el.load();
+  }, [helperGeneratedAudioSrc]);
 
   useEffect(() => {
     if (!seededChapter) return;
@@ -404,6 +552,29 @@ export default function ReadChapterPage() {
 
   const activeTip = voiceTip(chapter.voiceRecommendations, activeVoice);
 
+  const showEnhancedNarrationBlock =
+    readingMode === "enhanced" &&
+    typeof helperParsed.narration === "string" &&
+    helperParsed.narration.trim().length > 0;
+  const showStoryInsightsPanel = readingMode === "enhanced" && helperResponseJson !== null;
+
+  const paragraphBlocks = chapter.paragraphs.map((block, i) => {
+    const highlight = activeParagraphIndex === i;
+    return (
+      <div
+        key={i}
+        className={`rounded-lg px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/10 ring-1 ring-[#C4873A]/25" : ""}`}
+      >
+        <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+          {block.label}
+        </p>
+        <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
+          {block.text}
+        </p>
+      </div>
+    );
+  });
+
   return (
     <div className="mx-auto max-w-5xl">
       <nav className="mb-6 flex flex-wrap items-center gap-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -463,6 +634,36 @@ export default function ReadChapterPage() {
             <i className="ri-arrow-right-s-line ml-1" aria-hidden />
           </button>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-xl border border-[#E8E0D4] bg-[#FDFBF7] px-4 py-3">
+        <label className="block text-sm text-[#3E372B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Reading Mode
+          <select
+            className="mt-1 w-full max-w-xs rounded-md border border-[#D9CFBC] bg-white px-3 py-2 text-sm"
+            value={readingMode}
+            onChange={(e) => setReadingMode(e.target.value === "enhanced" ? "enhanced" : "exact")}
+          >
+            <option value="exact">Read Exactly</option>
+            <option value="enhanced">Enhanced Story Mode</option>
+          </select>
+        </label>
+        {readingMode === "enhanced" ? (
+          <button
+            type="button"
+            onClick={() => void runChapterHelper()}
+            disabled={isRunningHelper || showRemoteLoading}
+            className="mt-3 rounded-md bg-[#C4873A] px-4 py-2 text-sm font-medium text-white hover:bg-[#B9792E] disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            {isRunningHelper ? "Generating…" : "Generate enhanced narration"}
+          </button>
+        ) : null}
+        {helperError ? (
+          <p className="mt-2 text-sm text-red-700" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {helperError}
+          </p>
+        ) : null}
       </div>
 
       {showRemoteLoading ? (
@@ -643,27 +844,87 @@ export default function ReadChapterPage() {
               </div>
             ) : (
               <div className="space-y-6 text-left">
-                {chapter.paragraphs.map((block, i) => {
-                  const highlight = activeParagraphIndex === i;
-                  return (
-                    <div
-                      key={i}
-                      className={`rounded-lg px-1 -mx-1 transition-colors ${highlight ? "bg-[#C4873A]/10 ring-1 ring-[#C4873A]/25" : ""}`}
-                    >
+                {showEnhancedNarrationBlock ? (
+                  <>
+                    <div className="rounded-lg border border-[#3D3220]/60 bg-[#2C2416]/40 px-3 py-4">
                       <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {block.label}
+                        Generated Narration
                       </p>
-                      <p className="text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
-                        {block.text}
+                      <p className="whitespace-pre-wrap text-[#E8D9C0] text-sm leading-8 md:text-base md:leading-9" style={{ fontFamily: "'Lora', serif" }}>
+                        {helperParsed.narration}
                       </p>
+                      {helperGeneratedAudioSrc ? (
+                        <div className="mt-4 border-t border-[#3D3220]/50 pt-4">
+                          <p className="mb-2 text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+                            Enhanced narration audio
+                          </p>
+                          <audio ref={helperAudioRef} controls className="w-full rounded-md" preload="metadata" />
+                          {helperParsed.audioFileName ? (
+                            <p className="mt-1 text-[11px] text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                              {helperParsed.audioFileName}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
-                  );
-                })}
+                    <p className="text-[#6B6355] text-xs font-semibold uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Source passage
+                    </p>
+                    {paragraphBlocks}
+                  </>
+                ) : (
+                  paragraphBlocks
+                )}
               </div>
             )}
           </div>
 
           <div className="flex flex-col px-5 py-7">
+            {showStoryInsightsPanel ? (
+              <div className="mb-4 space-y-3 rounded-xl border border-[#3D3220] bg-[#2C2416]/50 p-3">
+                <p className="text-[#6B6355] text-xs font-semibold uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Story insights
+                </p>
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Summary
+                  </p>
+                  <p className="text-xs leading-relaxed text-[#E8D9C0]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {helperParsed.summary ?? "Not provided in response."}
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Characters
+                  </p>
+                  {helperParsed.characters.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {helperParsed.characters.map((name, idx) => (
+                        <span
+                          key={`${name}-${idx}`}
+                          className="rounded-full border border-[#3D3220] bg-[#2C2416] px-2 py-0.5 text-[10px] font-medium text-[#C4B89A]"
+                          style={{ fontFamily: "'Inter', sans-serif" }}
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Not provided in response.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Image prompt
+                  </p>
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#C4B89A]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {helperParsed.imagePrompt ?? "Not provided in response."}
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <p className="mb-2 text-[#6B6355] text-xs uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>
               Discuss / dissect
             </p>
