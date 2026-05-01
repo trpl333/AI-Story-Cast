@@ -13,6 +13,11 @@ import ReadChapterPage from "../pages/app/ReadChapterPage";
 import BookDetailPage from "../pages/app/BookDetailPage";
 import WebhookTestPage from "../pages/test/WebhookTestPage";
 
+/** Developer harness only — not part of the product nav; omitted from production builds. */
+const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
+  ? [{ path: "/webhook-test", element: <WebhookTestPage /> }]
+  : [];
+
 const routes: RouteObject[] = [
   {
     path: "/",
@@ -30,10 +35,7 @@ const routes: RouteObject[] = [
     path: "/signup",
     element: <SignupPage />,
   },
-  {
-    path: "/webhook-test",
-    element: <WebhookTestPage />,
-  },
+  ...devOnlyRoutes,
   {
     path: "/app",
     element: <ProtectedRoute />,
