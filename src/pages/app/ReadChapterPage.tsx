@@ -1,29 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getSeededChapter, type ReaderParagraph } from "@/data/curatedChapters";
 import { getLibraryBook, isLibraryBookId, readerChapterPath } from "@/data/libraryBooks";
 import { chapterBodyToReaderParagraphs } from "@/lib/chapterMarkers";
-import {
-  getBookChapterStorageKey,
-  LEGACY_MOBY_CHAPTER_1_STORAGE_KEY,
-  readShelfBookById,
-} from "@/lib/importedBookStorage";
+import { getImportedChapterRawWithLegacyFallback } from "@/lib/importedBookDb";
+import { readShelfBookById } from "@/lib/importedBookStorage";
 import { getPublicDomainSearchResultById } from "@/lib/publicDomainSearch";
-
-function readImportedChapterParagraphs(bookId: string, chapterSlug: string): ReaderParagraph[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    let raw = window.localStorage.getItem(getBookChapterStorageKey(bookId, chapterSlug));
-    if (!raw && bookId === "moby-dick" && chapterSlug === "chapter-1") {
-      raw = window.localStorage.getItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
-    }
-    if (!raw) return null;
-    const paragraphs = chapterBodyToReaderParagraphs(raw);
-    return paragraphs.length > 0 ? paragraphs : null;
-  } catch {
-    return null;
-  }
-}
 
 function chapterSlugToLabel(chapterSlug: string): string {
   const m = /^chapter-(\d+)$/.exec(chapterSlug);
@@ -63,10 +45,40 @@ export default function ReadChapterPage() {
     return getSeededChapter(bookId, chapterId);
   }, [bookId, chapterId]);
 
-  const importedParagraphs = useMemo(() => {
-    if (!bookId || !chapterId) return null;
-    return readImportedChapterParagraphs(bookId, chapterId);
-  }, [bookId, chapterId]);
+  const [importChapterPending, setImportChapterPending] = useState(true);
+  const [importedParagraphs, setImportedParagraphs] = useState<ReaderParagraph[] | null>(null);
+
+  const canResolveBook = Boolean(displayTitle);
+
+  useEffect(() => {
+    if (!bookId || !chapterId || !canResolveBook) {
+      setImportChapterPending(false);
+      setImportedParagraphs(null);
+      return;
+    }
+    let cancelled = false;
+    setImportChapterPending(true);
+    setImportedParagraphs(null);
+    void (async () => {
+      try {
+        const raw = await getImportedChapterRawWithLegacyFallback(bookId, chapterId);
+        if (cancelled) return;
+        if (typeof raw === "string" && raw.trim().length > 0) {
+          const parsed = chapterBodyToReaderParagraphs(raw);
+          setImportedParagraphs(parsed.length > 0 ? parsed : null);
+        } else {
+          setImportedParagraphs(null);
+        }
+      } catch {
+        if (!cancelled) setImportedParagraphs(null);
+      } finally {
+        if (!cancelled) setImportChapterPending(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId, chapterId, canResolveBook]);
 
   const paragraphs = importedParagraphs ?? seed?.paragraphs ?? null;
 
@@ -74,7 +86,6 @@ export default function ReadChapterPage() {
   const chapterHeading =
     seed?.title ?? importChapterTitle ?? (chapterId ? chapterSlugToLabel(chapterId) : "Chapter");
 
-  const canResolveBook = Boolean(displayTitle);
   const hasImportedBody = Boolean(importedParagraphs && importedParagraphs.length > 0);
   const hasReadableLayer = hasImportedBody || Boolean(seed);
 
@@ -106,6 +117,32 @@ export default function ReadChapterPage() {
         <Link className={`${btnPrimary} mt-8`} to="/app/library">
           Back to Library
         </Link>
+      </div>
+    );
+  }
+
+  if (importChapterPending) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-8">
+        <nav className="flex flex-wrap items-center gap-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <Link to="/app" className="hover:text-[#1C1A17]">
+            Home
+          </Link>
+          <span aria-hidden>/</span>
+          <Link to="/app/library" className="hover:text-[#1C1A17]">
+            Library
+          </Link>
+          <span aria-hidden>/</span>
+          <span className="font-medium text-[#1C1A17]">{displayTitle}</span>
+        </nav>
+        <div className="rounded-2xl border border-[#E0D8CC] bg-white p-12 text-center shadow-sm">
+          <p className="text-sm font-medium text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Loading chapter text…
+          </p>
+          <p className="mt-2 text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Checking for imported text in this browser.
+          </p>
+        </div>
       </div>
     );
   }

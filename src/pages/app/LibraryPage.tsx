@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { readerChapterHref } from "@/data/libraryBooks";
+import { migrateLegacyImportTextFromLocalStorage } from "@/lib/importedBookDb";
 import {
   clearImportedBookStoredText,
   hasAnyImportedBookChapter,
@@ -37,10 +38,49 @@ export default function LibraryPage() {
   const [importSuccessByBookId, setImportSuccessByBookId] = useState<Record<string, string>>({});
   const [reimportErrorByBookId, setReimportErrorByBookId] = useState<Record<string, string>>({});
   const importLocksRef = useRef<Set<string>>(new Set());
+  const [shelfTextFlags, setShelfTextFlags] = useState<Record<string, { full: boolean; chapter: boolean }>>({});
+
+  useEffect(() => {
+    void migrateLegacyImportTextFromLocalStorage();
+  }, []);
 
   useEffect(() => {
     writeShelfBooksToStorage(shelfBooks);
   }, [shelfBooks]);
+
+  const shelfIdsKey = shelfBooks.map((b) => b.id).join("\u0000");
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- shelfIdsKey encodes shelf membership
+  useEffect(() => {
+    if (shelfBooks.length === 0) {
+      setShelfTextFlags({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const next: Record<string, { full: boolean; chapter: boolean }> = {};
+      await Promise.all(
+        shelfBooks.map(async (b) => {
+          const [full, chapter] = await Promise.all([
+            hasImportedBookFullText(b.id),
+            hasAnyImportedBookChapter(b.id),
+          ]);
+          next[b.id] = { full, chapter };
+        }),
+      );
+      if (!cancelled) {
+        setShelfTextFlags(
+          Object.fromEntries(shelfBooks.map((b) => [b.id, next[b.id]])) as Record<
+            string,
+            { full: boolean; chapter: boolean }
+          >,
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shelfIdsKey]);
 
   const trimmedQuery = query.trim();
   const hasQuery = trimmedQuery.length > 0;
@@ -69,8 +109,13 @@ export default function LibraryPage() {
     }
   }
 
-  function handleRemoveFromShelf(book: ImportedShelfBook) {
-    clearImportedBookStoredText(book.id);
+  async function handleRemoveFromShelf(book: ImportedShelfBook) {
+    await clearImportedBookStoredText(book.id);
+    setShelfTextFlags((prev) => {
+      const next = { ...prev };
+      delete next[book.id];
+      return next;
+    });
     setShelfBooks((prev) => prev.filter((b) => b.id !== book.id));
     setReimportErrorByBookId((prev) => {
       const next = { ...prev };
@@ -113,6 +158,11 @@ export default function LibraryPage() {
           next[idx] = outcome.shelfBook;
           return next;
         });
+        const [full, chapter] = await Promise.all([
+          hasImportedBookFullText(book.id),
+          hasAnyImportedBookChapter(book.id),
+        ]);
+        setShelfTextFlags((prev) => ({ ...prev, [book.id]: { full, chapter } }));
         setImportSuccessByBookId((prev) => ({
           ...prev,
           [book.id]: `${book.title} has been re-imported.`,
@@ -153,6 +203,11 @@ export default function LibraryPage() {
           if (prev.some((b) => b.id === outcome.shelfBook.id)) return prev;
           return [...prev, outcome.shelfBook];
         });
+        const [full, chapter] = await Promise.all([
+          hasImportedBookFullText(searchResult.id),
+          hasAnyImportedBookChapter(searchResult.id),
+        ]);
+        setShelfTextFlags((prev) => ({ ...prev, [searchResult.id]: { full, chapter } }));
         setImportSuccessByBookId((prev) => ({
           ...prev,
           [searchResult.id]: `${searchResult.title} has been imported and added to your library.`,
@@ -307,15 +362,16 @@ export default function LibraryPage() {
           ) : (
             <ul className="space-y-6">
               {shelfBooks.map((book) => {
-                const hasText = hasImportedBookFullText(book.id);
-                const hasChapter = hasAnyImportedBookChapter(book.id);
+                const flags = shelfTextFlags[book.id];
                 const shelfBusy = Boolean(importingByBookId[book.id]);
                 const shelfStatus =
-                  hasText && hasChapter
-                    ? "Full text and chapter text saved locally."
-                    : hasText
-                      ? "Full text saved locally. Chapter text is not ready yet."
-                      : "Book is on your shelf, but local text is missing.";
+                  !flags
+                    ? "Checking stored text…"
+                    : flags.full && flags.chapter
+                      ? "Full text and chapter text saved locally."
+                      : flags.full
+                        ? "Full text saved locally. Chapter text is not ready yet."
+                        : "Book is on your shelf, but local text is missing.";
                 return (
                   <li key={book.id} className="space-y-2 border-b border-[#F0EBE3] pb-6 last:border-0 last:pb-0">
                     <p className="font-semibold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -344,7 +400,12 @@ export default function LibraryPage() {
                       >
                         {shelfBusy ? "Re-importing…" : "Re-import"}
                       </button>
-                      <button className={btnDanger} type="button" disabled={shelfBusy} onClick={() => handleRemoveFromShelf(book)}>
+                      <button
+                        className={btnDanger}
+                        type="button"
+                        disabled={shelfBusy}
+                        onClick={() => void handleRemoveFromShelf(book)}
+                      >
                         Remove
                       </button>
                     </div>

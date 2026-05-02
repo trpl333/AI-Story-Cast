@@ -1,3 +1,10 @@
+import {
+  getChapterText,
+  hasAnyChapterText as idbHasAnyChapterText,
+  hasFullText as idbHasFullText,
+  deleteAllTextsForBook as idbDeleteAllTextsForBook,
+} from "@/lib/importedBookDb";
+
 /** Shelf JSON in localStorage (same key as Library page). */
 export const LIBRARY_SHELF_STORAGE_KEY = "aistorycast-library-shelf-v1";
 
@@ -96,12 +103,12 @@ export function writeShelfBooksToStorage(books: ImportedShelfBook[]) {
   }
 }
 
-/** Raw full-text import from a public-domain source (e.g. Gutenberg plain .txt). */
+/** Legacy localStorage key for full text (migration / cleanup only). */
 export function getBookTextStorageKey(bookId: string): string {
   return `aistorycast-book-text-${bookId}`;
 }
 
-/** Extracted chapter body for the reader (overrides curated seed when present). */
+/** Legacy localStorage key for chapter body (migration / cleanup only). */
 export function getBookChapterStorageKey(bookId: string, chapterSlug: string): string {
   return `aistorycast-book-chapter-${bookId}-${chapterSlug}`;
 }
@@ -109,23 +116,13 @@ export function getBookChapterStorageKey(bookId: string, chapterSlug: string): s
 /** Pre-refactor key; read-only fallback so existing installs keep chapter text. */
 export const LEGACY_MOBY_CHAPTER_1_STORAGE_KEY = "aistorycast-book-chapter-moby-dick-chapter-1";
 
-export function hasImportedBookFullText(bookId: string): boolean {
+function legacyHasFullTextInLocalStorage(bookId: string): boolean {
   if (typeof window === "undefined") return false;
   const raw = window.localStorage.getItem(getBookTextStorageKey(bookId));
   return typeof raw === "string" && raw.length > 0;
 }
 
-export function hasImportedBookChapter(bookId: string, chapterSlug: string): boolean {
-  if (typeof window === "undefined") return false;
-  let raw = window.localStorage.getItem(getBookChapterStorageKey(bookId, chapterSlug));
-  if (!raw && bookId === "moby-dick" && chapterSlug === "chapter-1") {
-    raw = window.localStorage.getItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
-  }
-  return typeof raw === "string" && raw.length > 0;
-}
-
-/** True if any `aistorycast-book-chapter-${bookId}-*` key has non-empty text. */
-export function hasAnyImportedBookChapter(bookId: string): boolean {
+function legacyHasAnyChapterInLocalStorage(bookId: string): boolean {
   if (typeof window === "undefined") return false;
   const prefix = `aistorycast-book-chapter-${bookId}-`;
   for (let i = 0; i < window.localStorage.length; i++) {
@@ -141,11 +138,40 @@ export function hasAnyImportedBookChapter(bookId: string): boolean {
   return false;
 }
 
+function legacyHasChapterInLocalStorage(bookId: string, chapterSlug: string): boolean {
+  if (typeof window === "undefined") return false;
+  let raw = window.localStorage.getItem(getBookChapterStorageKey(bookId, chapterSlug));
+  if (!raw && bookId === "moby-dick" && chapterSlug === "chapter-1") {
+    raw = window.localStorage.getItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
+  }
+  return typeof raw === "string" && raw.length > 0;
+}
+
+/** True when full raw text exists in IndexedDB (or legacy localStorage before migration). */
+export async function hasImportedBookFullText(bookId: string): Promise<boolean> {
+  if (await idbHasFullText(bookId)) return true;
+  return legacyHasFullTextInLocalStorage(bookId);
+}
+
+/** True when extracted chapter text exists in IndexedDB (or legacy localStorage). */
+export async function hasImportedBookChapter(bookId: string, chapterSlug: string): Promise<boolean> {
+  const fromIdb = await getChapterText(bookId, chapterSlug);
+  if (typeof fromIdb === "string" && fromIdb.length > 0) return true;
+  return legacyHasChapterInLocalStorage(bookId, chapterSlug);
+}
+
+/** True if any chapter slice exists for the book (IndexedDB or legacy keys). */
+export async function hasAnyImportedBookChapter(bookId: string): Promise<boolean> {
+  if (await idbHasAnyChapterText(bookId)) return true;
+  return legacyHasAnyChapterInLocalStorage(bookId);
+}
+
 /**
- * Removes saved full text and every `aistorycast-book-chapter-${bookId}-*` key (plus legacy Moby chapter key when applicable).
+ * Removes all large text for this book from IndexedDB and clears legacy localStorage keys.
  * Does not modify the shelf JSON array; callers should update shelf state separately.
  */
-export function clearImportedBookStoredText(bookId: string): void {
+export async function clearImportedBookStoredText(bookId: string): Promise<void> {
+  await idbDeleteAllTextsForBook(bookId);
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(getBookTextStorageKey(bookId));

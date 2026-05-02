@@ -1,7 +1,8 @@
 import { extractChapterByMarkers } from "@/lib/chapterMarkers";
+import { putChapterText, putFullText, deleteAllTextsForBook } from "@/lib/importedBookDb";
 import {
-  getBookChapterStorageKey,
   getBookTextStorageKey,
+  LEGACY_MOBY_CHAPTER_1_STORAGE_KEY,
   USER_FACING_SOURCE_LABEL,
   type ImportedShelfBook,
   type SearchResult,
@@ -37,11 +38,24 @@ export type ImportBookFailure = {
 };
 export type ImportBookSuccess = { ok: true; shelfBook: ImportedShelfBook };
 
-function clearStoredImport(bookId: string, chapterSlug: string | undefined) {
+async function clearStoredImport(bookId: string): Promise<void> {
+  await deleteAllTextsForBook(bookId);
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(getBookTextStorageKey(bookId));
-    if (chapterSlug) window.localStorage.removeItem(getBookChapterStorageKey(bookId, chapterSlug));
+    const chapterPrefix = `aistorycast-book-chapter-${bookId}-`;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith(chapterPrefix)) continue;
+      keysToRemove.push(k);
+    }
+    for (const k of keysToRemove) {
+      window.localStorage.removeItem(k);
+    }
+    if (bookId === "moby-dick") {
+      window.localStorage.removeItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
+    }
   } catch {
     /* ignore */
   }
@@ -165,13 +179,12 @@ async function tryImportViaBrowserFetch(searchResult: SearchResult): Promise<
   }
 }
 
-function persistImportedText(
+async function persistImportedText(
   searchResult: SearchResult,
   rawText: string,
   chapterBody: string | null,
-): ImportBookSuccess | ImportBookFailure {
+): Promise<ImportBookSuccess | ImportBookFailure> {
   const tag = logPrefix(searchResult);
-  const textKey = getBookTextStorageKey(searchResult.id);
   const slug = searchResult.chapterImport?.chapterSlug;
 
   if (searchResult.chapterImport && slug && (!chapterBody || chapterBody.length === 0)) {
@@ -180,13 +193,13 @@ function persistImportedText(
   }
 
   try {
-    window.localStorage.setItem(textKey, rawText);
+    await putFullText(searchResult.id, rawText);
     if (slug && chapterBody) {
-      window.localStorage.setItem(getBookChapterStorageKey(searchResult.id, slug), chapterBody);
+      await putChapterText(searchResult.id, slug, chapterBody);
     }
   } catch (e) {
-    clearStoredImport(searchResult.id, slug);
-    console.error(tag, "localStorage write failed:", e instanceof Error ? e.message : String(e));
+    await clearStoredImport(searchResult.id);
+    console.error(tag, "IndexedDB write failed:", e instanceof Error ? e.message : String(e));
     return { ok: false, message: `Could not import ${searchResult.title}. Please try again.` };
   }
 
@@ -204,7 +217,7 @@ function persistImportedText(
 
 /**
  * Imports plain text when `ENABLE_REMOTE_IMPORT` is true: tries the configured proxy first, then browser fetch.
- * Stores full text and optional chapter slice (from proxy `chapterText` or client marker extraction).
+ * Persists full text and optional chapter slice to IndexedDB (from proxy `chapterText` or client marker extraction).
  * When `ENABLE_REMOTE_IMPORT` is false, returns `IMPORT_SERVICE_NOT_CONNECTED` without calling the network.
  */
 export async function importBook(searchResult: SearchResult): Promise<ImportBookSuccess | ImportBookFailure> {
@@ -232,7 +245,6 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
   if (proxyOutcome.ok) {
     rawText = proxyOutcome.rawText;
     proxyChapter = proxyOutcome.chapterText;
-    usedProxy = true;
     console.debug(tag, "loaded full text via import proxy");
   } else {
     console.debug(tag, "falling back to browser fetch after proxy:", proxyOutcome.reason);
@@ -247,12 +259,12 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
 
   const { chapterBody, errorReason } = resolveChapterBodyForStorage(searchResult, rawText, proxyChapter);
   if (errorReason) {
-    clearStoredImport(searchResult.id, chapterSlug);
+    await clearStoredImport(searchResult.id);
     console.error(tag, "import failed:", errorReason);
     return { ok: false, message: `Could not import ${searchResult.title}. Please try again.` };
   }
 
-  const outcome = persistImportedText(searchResult, rawText, chapterBody);
+  const outcome = await persistImportedText(searchResult, rawText, chapterBody);
   if (!outcome.ok) {
     console.error(tag, "persist failed after successful fetch");
   }
