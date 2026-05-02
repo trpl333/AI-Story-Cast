@@ -260,6 +260,9 @@ async function persistImportedText(
     status: "ready",
     addedAt: new Date().toISOString(),
   };
+  for (const ch of chapterBodies) {
+    console.debug(tag, "stored chapter", ch.slug, "bodyLength", ch.body.length);
+  }
   return { ok: true, shelfBook };
 }
 

@@ -120,6 +120,7 @@ export default function ReadChapterPage() {
     void (async () => {
       try {
         const { text, title } = await getImportedChapterWithLegacyFallback(bookId, chapterId);
+        console.debug("[ReadChapterPage]", { bookId, chapterSlug: chapterId, loadedBodyLength: text?.length ?? 0 });
         if (cancelled) return;
         if (typeof text === "string" && text.trim().length > 0) {
           const parsed = chapterBodyToReaderParagraphs(text);
