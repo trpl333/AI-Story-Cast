@@ -10,7 +10,7 @@ import {
   type ImportedShelfBook,
   type SearchResult,
 } from "@/lib/importedBookStorage";
-import { importBook } from "@/lib/importBook";
+import { importBook, IMPORT_SERVICE_NOT_CONNECTED } from "@/lib/importBook";
 import { searchPublicDomainBooks } from "@/lib/publicDomainSearch";
 
 const panelClass =
@@ -88,7 +88,11 @@ export default function LibraryPage() {
           [searchResult.id]: `${searchResult.title} has been imported and added to your library.`,
         }));
       } else {
-        setImportErrorByBookId((prev) => ({ ...prev, [searchResult.id]: outcome.message }));
+        const msg =
+          outcome.code === IMPORT_SERVICE_NOT_CONNECTED
+            ? "Import service is not connected yet."
+            : outcome.message;
+        setImportErrorByBookId((prev) => ({ ...prev, [searchResult.id]: msg }));
       }
     } finally {
       importLocksRef.current.delete(searchResult.id);
@@ -110,8 +114,9 @@ export default function LibraryPage() {
           Search and import
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Search the starter public-domain catalog. More titles coming soon. Import plain text into this browser, then
-          open chapter 1 in the reader.
+          This page is a starter catalog preview: search works today, and more titles will appear over time. Book import
+          will connect next once the import service is wired up; until then you can still open titles that already have
+          reader content from the rest of the app.
         </p>
       </div>
 
@@ -122,10 +127,10 @@ export default function LibraryPage() {
               Search
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              This is an early curated public-domain catalog, not a full web search. Try words from the title or author
-              (e.g. <span className="font-medium text-[#1C1A17]">emma</span>,{" "}
+              Search the starter catalog (not a full web search). Try words from the title or author — e.g.{" "}
+              <span className="font-medium text-[#1C1A17]">emma</span>,{" "}
               <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
-              <span className="font-medium text-[#1C1A17]">moby</span>).
+              <span className="font-medium text-[#1C1A17]">moby</span>. Import from here is coming next.
             </p>
           </div>
 

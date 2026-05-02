@@ -7,6 +7,15 @@ import {
   type SearchResult,
 } from "@/lib/importedBookStorage";
 
+/**
+ * When false, import skips the n8n proxy and direct source fetch (honest until the import service exists).
+ * Set to true once the webhook is deployed and CORS allows the app origin.
+ */
+export const ENABLE_REMOTE_IMPORT = false;
+
+/** Returned in `ImportBookFailure.code` when `ENABLE_REMOTE_IMPORT` is false. */
+export const IMPORT_SERVICE_NOT_CONNECTED = "IMPORT_SERVICE_NOT_CONNECTED" as const;
+
 /** Optional server-side fetch + slice; used when browser CORS blocks direct Gutenberg access. */
 export const AISTORYCAST_IMPORT_PROXY_URL =
   "https://n8n.jdpenterprises.ai/webhook/aistorycast-import-book";
@@ -20,6 +29,13 @@ type ProxyImportResponse = {
 function logPrefix(sr: SearchResult): string {
   return `[importBook:${sr.id}]`;
 }
+
+export type ImportBookFailure = {
+  ok: false;
+  message: string;
+  code?: typeof IMPORT_SERVICE_NOT_CONNECTED;
+};
+export type ImportBookSuccess = { ok: true; shelfBook: ImportedShelfBook };
 
 function clearStoredImport(bookId: string, chapterSlug: string | undefined) {
   if (typeof window === "undefined") return;
@@ -186,12 +202,10 @@ function persistImportedText(
   return { ok: true, shelfBook };
 }
 
-export type ImportBookFailure = { ok: false; message: string };
-export type ImportBookSuccess = { ok: true; shelfBook: ImportedShelfBook };
-
 /**
- * Imports plain text: tries configured proxy first, then browser fetch. Stores full text and
- * optional chapter slice (from proxy `chapterText` or client marker extraction).
+ * Imports plain text when `ENABLE_REMOTE_IMPORT` is true: tries the configured proxy first, then browser fetch.
+ * Stores full text and optional chapter slice (from proxy `chapterText` or client marker extraction).
+ * When `ENABLE_REMOTE_IMPORT` is false, returns `IMPORT_SERVICE_NOT_CONNECTED` without calling the network.
  */
 export async function importBook(searchResult: SearchResult): Promise<ImportBookSuccess | ImportBookFailure> {
   if (typeof window === "undefined") {
@@ -202,9 +216,17 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
   const tag = logPrefix(searchResult);
   const chapterSlug = searchResult.chapterImport?.chapterSlug;
 
+  if (!ENABLE_REMOTE_IMPORT) {
+    console.warn(tag, "IMPORT_SERVICE_NOT_CONNECTED: ENABLE_REMOTE_IMPORT is false (no proxy or direct fetch)");
+    return {
+      ok: false,
+      code: IMPORT_SERVICE_NOT_CONNECTED,
+      message: `Could not import ${searchResult.title}. Please try again.`,
+    };
+  }
+
   let rawText: string;
   let proxyChapter: string | undefined;
-  let usedProxy = false;
 
   const proxyOutcome = await tryImportViaProxy(searchResult);
   if (proxyOutcome.ok) {
