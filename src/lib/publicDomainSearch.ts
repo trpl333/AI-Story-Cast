@@ -1,4 +1,10 @@
 import { chapterConfigsForImport, type SearchResult } from "@/lib/importedBookStorage";
+import {
+  extractGutenbergNumericId,
+  fetchLivePublicDomainSearchResults,
+  mergeLiveSearchResultsIntoSessionCache,
+  readLiveSearchResultById,
+} from "@/lib/publicDomainLiveSearch";
 
 /**
  * Early curated public-domain starter catalog (local only). `source` / `sourceUrl` are kept for
@@ -51,6 +57,20 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       startMarker: "CHAPTER I\n\nJONATHAN HARKER\u2019S JOURNAL\n\n(_Kept in shorthand._)",
       endMarker: "\n\n\n\n\nCHAPTER II\n\nJONATHAN HARKER\u2019S JOURNAL--_continued_",
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "Jonathan Harker’s Journal",
+        startMarker: "CHAPTER I\n\nJONATHAN HARKER\u2019S JOURNAL\n\n(_Kept in shorthand._)",
+        endMarker: "\n\n\n\n\nCHAPTER II\n\nJONATHAN HARKER\u2019S JOURNAL--_continued_",
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "CHAPTER II — Jonathan Harker’s Journal (continued)",
+        startMarker: "CHAPTER II\n\nJONATHAN HARKER\u2019S JOURNAL--_continued_",
+        endMarker: "\n\n\n\n\nCHAPTER III\n\nJONATHAN HARKER\u2019S JOURNAL--_continued_",
+      },
+    ],
   },
   {
     id: "pride-and-prejudice",
@@ -67,6 +87,21 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
         "It is a truth universally acknowledged, that a single man in possession\nof a good fortune must be in want of a wife.",
       endMarker: "\n\n\n\n\nCHAPTER II.\n\n\n[Illustration]",
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "Chapter I",
+        startMarker:
+          "It is a truth universally acknowledged, that a single man in possession\nof a good fortune must be in want of a wife.",
+        endMarker: "\n\n\n\n\nCHAPTER II.\n\n\n[Illustration]",
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "Chapter II",
+        startMarker: "\n\n\n\n\nCHAPTER II.\n\n\n[Illustration]",
+        endMarker: "\n\n\n\n\nCHAPTER III.\n\n\n[Illustration]",
+      },
+    ],
   },
   {
     id: "sherlock-holmes-adventures",
@@ -82,6 +117,20 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       startMarker: "To Sherlock Holmes she is always _the_ woman.",
       endMarker: "II. THE RED-HEADED LEAGUE",
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "A Scandal in Bohemia",
+        startMarker: "To Sherlock Holmes she is always _the_ woman.",
+        endMarker: "II. THE RED-HEADED LEAGUE",
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "The Red-Headed League",
+        startMarker: "II. THE RED-HEADED LEAGUE",
+        endMarker: "III. A CASE OF IDENTITY",
+      },
+    ],
   },
   {
     id: "frankenstein",
@@ -97,6 +146,20 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       startMarker: "\n\nChapter 1\n\n",
       endMarker: "\n\nChapter 2\n\n",
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "Chapter 1",
+        startMarker: "\n\nChapter 1\n\n",
+        endMarker: "\n\nChapter 2\n\n",
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "Chapter 2",
+        startMarker: "\n\nChapter 2\n\n",
+        endMarker: "\n\nChapter 3\n\n",
+      },
+    ],
   },
   {
     id: "emma",
@@ -113,6 +176,21 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       endMarker: "\n\n\n\n\nCHAPTER II\n\n\nMr. Weston was a native of Highbury",
       startMarkerOccurrenceIndex: 0,
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "Chapter I",
+        startMarker: "VOLUME I\n\n\n\n\nCHAPTER I\n\n\nEmma Woodhouse, handsome, clever, and rich",
+        endMarker: "\n\n\n\n\nCHAPTER II\n\n\nMr. Weston was a native of Highbury",
+        startMarkerOccurrenceIndex: 0,
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "Chapter II",
+        startMarker: "\n\n\n\n\nCHAPTER II\n\n\nMr. Weston was a native of Highbury",
+        endMarker: "\n\n\n\n\nCHAPTER III\n\n\nMr. Woodhouse was fond of society in his own way.",
+      },
+    ],
   },
   {
     id: "great-expectations",
@@ -131,6 +209,24 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
         "\n\n\n\n\nChapter II.\n\n\nMy sister, Mrs. Joe Gargery, was more than twenty years older than I",
       startMarkerOccurrenceIndex: 0,
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "Chapter I",
+        startMarker:
+          "Chapter I.\n\n\nMy father\u2019s family name being Pirrip, and my Christian name Philip",
+        endMarker:
+          "\n\n\n\n\nChapter II.\n\n\nMy sister, Mrs. Joe Gargery, was more than twenty years older than I",
+        startMarkerOccurrenceIndex: 0,
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "Chapter II",
+        startMarker:
+          "\n\n\n\n\nChapter II.\n\n\nMy sister, Mrs. Joe Gargery, was more than twenty years older than I",
+        endMarker: "\n\n\n\n\nChapter III.\n\n\nIt was a rimy morning, and very damp.",
+      },
+    ],
   },
 ];
 
@@ -144,23 +240,48 @@ function haystackFor(result: SearchResult): string {
 
 /**
  * Case-insensitive match: every whitespace-separated token in `query` must appear
- * somewhere in the title, author, or description. Only titles in the starter catalog match
- * (e.g. “lord of the flies” returns no rows — copyrighted works are not listed).
+ * somewhere in the title, author, or description. Starter catalog matches are always included;
+ * when `import.meta.env.VITE_AISTORYCAST_SEARCH_URL` is set, live results from the n8n webhook
+ * are appended (deduped by id and by Gutenberg numeric id already covered by the starter list).
  */
 export async function searchPublicDomainBooks(query: string): Promise<SearchResult[]> {
   const trimmed = query.trim().toLowerCase();
   if (trimmed.length === 0) return [];
 
   const tokens = trimmed.split(/\s+/).filter((t) => t.length > 0);
-  const matches = PUBLIC_DOMAIN_MOCK_CATALOG.filter((book) => {
+  const starterMatches = PUBLIC_DOMAIN_MOCK_CATALOG.filter((book) => {
     const hay = haystackFor(book);
     return tokens.every((token) => hay.includes(token));
   });
 
-  return Promise.resolve([...matches]);
+  const merged: SearchResult[] = [...starterMatches];
+  const searchUrl = import.meta.env.VITE_AISTORYCAST_SEARCH_URL;
+  if (typeof searchUrl === "string" && searchUrl.trim().length > 0) {
+    const live = await fetchLivePublicDomainSearchResults(searchUrl.trim(), trimmed);
+    mergeLiveSearchResultsIntoSessionCache(live);
+
+    const mockGutenbergIds = new Set(
+      PUBLIC_DOMAIN_MOCK_CATALOG.map((b) => extractGutenbergNumericId(b.sourceUrl)).filter(
+        (n): n is number => n !== null,
+      ),
+    );
+    const seenIds = new Set(merged.map((m) => m.id));
+    for (const row of live) {
+      if (seenIds.has(row.id)) continue;
+      const gid = extractGutenbergNumericId(row.sourceUrl);
+      if (gid !== null && mockGutenbergIds.has(gid)) continue;
+      seenIds.add(row.id);
+      merged.push(row);
+    }
+  }
+
+  return merged;
 }
 
-/** Resolve display/import metadata for a book id when it is not on the app catalog shelf shape yet. */
+/**
+ * Resolve display/import metadata for a book id: starter catalog first, then the latest live
+ * search rows cached in session (same browser tab/session as Library search).
+ */
 export function getPublicDomainSearchResultById(id: string): SearchResult | undefined {
-  return PUBLIC_DOMAIN_MOCK_CATALOG.find((b) => b.id === id);
+  return PUBLIC_DOMAIN_MOCK_CATALOG.find((b) => b.id === id) ?? readLiveSearchResultById(id);
 }

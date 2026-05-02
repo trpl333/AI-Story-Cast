@@ -111,6 +111,21 @@ export function readShelfBookById(bookId: string): ImportedShelfBook | null {
   return books.find((b) => b.id === bookId) ?? null;
 }
 
+/**
+ * Minimal `SearchResult` for titles discovered via live search or missing from the starter catalog,
+ * so re-import and proxy fetch still work when only shelf metadata exists.
+ */
+export function shelfBookToSearchResult(book: ImportedShelfBook): SearchResult {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    source: book.source,
+    sourceUrl: book.sourceUrl,
+    description: "",
+  };
+}
+
 export function writeShelfBooksToStorage(books: ImportedShelfBook[]) {
   if (typeof window === "undefined") return;
   try {

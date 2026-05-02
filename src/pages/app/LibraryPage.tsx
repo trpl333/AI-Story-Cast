@@ -9,6 +9,7 @@ import {
   readShelfBooksFromStorage,
   USER_FACING_SOURCE_LABEL,
   writeShelfBooksToStorage,
+  shelfBookToSearchResult,
   type ImportedShelfBook,
   type SearchResult,
 } from "@/lib/importedBookStorage";
@@ -131,14 +132,7 @@ export default function LibraryPage() {
 
   async function handleReimportFromShelf(book: ImportedShelfBook) {
     if (importLocksRef.current.has(book.id)) return;
-    const catalog = getPublicDomainSearchResultById(book.id);
-    if (!catalog) {
-      setReimportErrorByBookId((prev) => ({
-        ...prev,
-        [book.id]: "Could not re-import this book because its catalog source is unavailable.",
-      }));
-      return;
-    }
+    const catalog = getPublicDomainSearchResultById(book.id) ?? shelfBookToSearchResult(book);
 
     importLocksRef.current.add(book.id);
     setImportingByBookId((prev) => ({ ...prev, [book.id]: true }));
@@ -251,11 +245,11 @@ export default function LibraryPage() {
               Search
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Search currently checks the starter public-domain catalog only. More titles and full catalog search are coming
-              next. Try words from the title or author — e.g.{" "}
-              <span className="font-medium text-[#1C1A17]">emma</span>,{" "}
-              <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
-              <span className="font-medium text-[#1C1A17]">moby</span>.
+              Search matches the curated starter list first. When the live catalog webhook is configured, additional
+              Project Gutenberg titles appear below those matches. Try title or author words — e.g.{" "}
+              <span className="font-medium text-[#1C1A17]">great expectations</span>,{" "}
+              <span className="font-medium text-[#1C1A17]">christmas carol</span>,{" "}
+              <span className="font-medium text-[#1C1A17]">emma</span>.
             </p>
           </div>
 
@@ -288,7 +282,7 @@ export default function LibraryPage() {
               </h2>
               {searchResults.length === 0 ? (
                 <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  No match in the starter catalog yet.
+                  No matches in the starter catalog or live search yet.
                 </p>
               ) : (
                 <ul className="space-y-8">

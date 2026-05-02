@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   /** Reader API (FastAPI). Defaults to http://127.0.0.1:8000 when unset. */
   readonly VITE_API_BASE_URL?: string;
+  /** Optional n8n POST webhook for public-domain book search (`{ query }` → `{ success, results }`). */
+  readonly VITE_AISTORYCAST_SEARCH_URL?: string;
 }
 
 interface ImportMeta {
