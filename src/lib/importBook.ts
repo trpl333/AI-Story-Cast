@@ -11,7 +11,7 @@ import {
  * When false, import skips the n8n proxy and direct source fetch (honest until the import service exists).
  * Set to true once the webhook is deployed and CORS allows the app origin.
  */
-export const ENABLE_REMOTE_IMPORT = false;
+export const ENABLE_REMOTE_IMPORT = true;
 
 /** Returned in `ImportBookFailure.code` when `ENABLE_REMOTE_IMPORT` is false. */
 export const IMPORT_SERVICE_NOT_CONNECTED = "IMPORT_SERVICE_NOT_CONNECTED" as const;
