@@ -1,4 +1,4 @@
-import type { SearchResult } from "@/lib/importedBookStorage";
+import { chapterConfigsForImport, type SearchResult } from "@/lib/importedBookStorage";
 
 /**
  * Early curated public-domain starter catalog (local only). `source` / `sourceUrl` are kept for
@@ -20,6 +20,22 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       endMarker: "CHAPTER 2. The Carpet-Bag.",
       startMarkerOccurrenceIndex: 1,
     },
+    chapterImports: [
+      {
+        chapterSlug: "chapter-1",
+        title: "CHAPTER 1. Loomings.",
+        startMarker: "CHAPTER 1. Loomings.",
+        endMarker: "CHAPTER 2. The Carpet-Bag.",
+        startMarkerOccurrenceIndex: 1,
+      },
+      {
+        chapterSlug: "chapter-2",
+        title: "CHAPTER 2. The Carpet-Bag.",
+        startMarker: "CHAPTER 2. The Carpet-Bag.",
+        endMarker: "CHAPTER 3. The Spouter-Inn.",
+        startMarkerOccurrenceIndex: 1,
+      },
+    ],
   },
   {
     id: "dracula",
@@ -119,7 +135,11 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
 ];
 
 function haystackFor(result: SearchResult): string {
-  return `${result.title} ${result.author} ${result.description}`.toLowerCase();
+  const parts = [result.title, result.author, result.description];
+  for (const c of chapterConfigsForImport(result)) {
+    if (c.title) parts.push(c.title);
+  }
+  return parts.join(" ").toLowerCase();
 }
 
 /**

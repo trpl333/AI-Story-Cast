@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getSeededChapter, type ReaderParagraph } from "@/data/curatedChapters";
-import { getLibraryBook, isLibraryBookId, readerChapterPath } from "@/data/libraryBooks";
+import { getLibraryBook, isLibraryBookId, readerChapterHref } from "@/data/libraryBooks";
 import { chapterBodyToReaderParagraphs } from "@/lib/chapterMarkers";
-import { getImportedChapterRawWithLegacyFallback } from "@/lib/importedBookDb";
-import { readShelfBookById } from "@/lib/importedBookStorage";
+import {
+  getImportedChapterWithLegacyFallback,
+  listImportedChapterSlugs,
+  sortChapterSlugs,
+} from "@/lib/importedBookDb";
+import { chapterConfigsForImport, readShelfBookById } from "@/lib/importedBookStorage";
 import { getPublicDomainSearchResultById } from "@/lib/publicDomainSearch";
 
 function chapterSlugToLabel(chapterSlug: string): string {
@@ -14,10 +18,50 @@ function chapterSlugToLabel(chapterSlug: string): string {
 }
 
 const btnPrimary =
-  "inline-flex items-center justify-center rounded-full bg-[#2C2416] px-5 py-2.5 text-sm font-semibold text-[#FAF8F4] transition-colors hover:bg-[#3D3220]";
+  "inline-flex items-center justify-center rounded-full bg-[#2C2416] px-5 py-2.5 text-sm font-semibold text-[#FAF8F4] transition-colors hover:bg-[#3D3220] disabled:cursor-not-allowed disabled:opacity-40";
 
 const btnSecondary =
   "inline-flex items-center justify-center rounded-full border border-[#E0D8CC] bg-[#FDFBF7] px-5 py-2.5 text-sm font-semibold text-[#1C1A17] transition-colors hover:border-[#C4873A]/40";
+
+const navDisabledClass = "cursor-not-allowed opacity-40";
+
+function ChapterNavLinks(props: {
+  bookId: string;
+  prevSlug: string | null;
+  nextSlug: string | null;
+  layout?: "header" | "footer";
+}) {
+  const { bookId, prevSlug, nextSlug, layout = "header" } = props;
+  const prevTo = prevSlug ? readerChapterHref(bookId, prevSlug) : null;
+  const nextTo = nextSlug ? readerChapterHref(bookId, nextSlug) : null;
+  const primary = layout === "footer";
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {prevTo ? (
+        <Link className={btnSecondary} to={prevTo}>
+          Previous chapter
+        </Link>
+      ) : (
+        <span className={`${btnSecondary} ${navDisabledClass}`} aria-disabled="true">
+          Previous chapter
+        </span>
+      )}
+      {nextTo ? (
+        <Link className={btnSecondary} to={nextTo}>
+          Next chapter
+        </Link>
+      ) : (
+        <span className={`${btnSecondary} ${navDisabledClass}`} aria-disabled="true">
+          Next chapter
+        </span>
+      )}
+      <Link className={primary ? btnPrimary : btnSecondary} to="/app/library">
+        Back to Library
+      </Link>
+    </div>
+  );
+}
 
 export default function ReadChapterPage() {
   const { bookId, chapterId } = useParams();
@@ -45,32 +89,52 @@ export default function ReadChapterPage() {
     return getSeededChapter(bookId, chapterId);
   }, [bookId, chapterId]);
 
+  const catalogChapterConfigs = useMemo(() => chapterConfigsForImport(mockMeta), [mockMeta]);
+
   const [importChapterPending, setImportChapterPending] = useState(true);
   const [importedParagraphs, setImportedParagraphs] = useState<ReaderParagraph[] | null>(null);
+  const [importedChapterTitle, setImportedChapterTitle] = useState<string | undefined>(undefined);
+  const [idbChapterSlugs, setIdbChapterSlugs] = useState<string[]>([]);
 
   const canResolveBook = Boolean(displayTitle);
+
+  useEffect(() => {
+    if (!bookId || !canResolveBook) {
+      setIdbChapterSlugs([]);
+      return;
+    }
+    void listImportedChapterSlugs(bookId).then(setIdbChapterSlugs);
+  }, [bookId, canResolveBook]);
 
   useEffect(() => {
     if (!bookId || !chapterId || !canResolveBook) {
       setImportChapterPending(false);
       setImportedParagraphs(null);
+      setImportedChapterTitle(undefined);
       return;
     }
     let cancelled = false;
     setImportChapterPending(true);
     setImportedParagraphs(null);
+    setImportedChapterTitle(undefined);
     void (async () => {
       try {
-        const raw = await getImportedChapterRawWithLegacyFallback(bookId, chapterId);
+        const { text, title } = await getImportedChapterWithLegacyFallback(bookId, chapterId);
         if (cancelled) return;
-        if (typeof raw === "string" && raw.trim().length > 0) {
-          const parsed = chapterBodyToReaderParagraphs(raw);
+        if (typeof text === "string" && text.trim().length > 0) {
+          const parsed = chapterBodyToReaderParagraphs(text);
           setImportedParagraphs(parsed.length > 0 ? parsed : null);
         } else {
           setImportedParagraphs(null);
         }
+        if (typeof title === "string" && title.trim().length > 0) {
+          setImportedChapterTitle(title.trim());
+        }
       } catch {
-        if (!cancelled) setImportedParagraphs(null);
+        if (!cancelled) {
+          setImportedParagraphs(null);
+          setImportedChapterTitle(undefined);
+        }
       } finally {
         if (!cancelled) setImportChapterPending(false);
       }
@@ -82,9 +146,30 @@ export default function ReadChapterPage() {
 
   const paragraphs = importedParagraphs ?? seed?.paragraphs ?? null;
 
-  const importChapterTitle = mockMeta?.chapterImport?.title;
+  const catalogTitleForSlug = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of catalogChapterConfigs) {
+      if (c.title) map.set(c.chapterSlug, c.title);
+    }
+    return map;
+  }, [catalogChapterConfigs]);
+
+  const navChapterSlugs = useMemo(() => {
+    if (catalogChapterConfigs.length > 0) {
+      return catalogChapterConfigs.map((c) => c.chapterSlug);
+    }
+    return sortChapterSlugs(idbChapterSlugs);
+  }, [catalogChapterConfigs, idbChapterSlugs]);
+
+  const navIndex = bookId && chapterId ? navChapterSlugs.indexOf(chapterId) : -1;
+  const prevSlug = navIndex > 0 ? navChapterSlugs[navIndex - 1] : null;
+  const nextSlug = navIndex >= 0 && navIndex < navChapterSlugs.length - 1 ? navChapterSlugs[navIndex + 1] : null;
+
   const chapterHeading =
-    seed?.title ?? importChapterTitle ?? (chapterId ? chapterSlugToLabel(chapterId) : "Chapter");
+    seed?.title ??
+    catalogTitleForSlug.get(chapterId ?? "") ??
+    importedChapterTitle ??
+    (chapterId ? chapterSlugToLabel(chapterId) : "Chapter");
 
   const hasImportedBody = Boolean(importedParagraphs && importedParagraphs.length > 0);
   const hasReadableLayer = hasImportedBody || Boolean(seed);
@@ -172,16 +257,13 @@ export default function ReadChapterPage() {
             No text for this chapter yet. If you imported the book, we may still need a chapter slice for this edition;
             curated reader content may also be unavailable for this route.
           </p>
-          <Link className={`${btnPrimary} mt-8 inline-flex`} to="/app/library">
-            Back to Library
-          </Link>
+          <div className="mt-8 flex justify-center">
+            <ChapterNavLinks bookId={bookId} prevSlug={prevSlug} nextSlug={nextSlug} layout="footer" />
+          </div>
         </div>
       </div>
     );
   }
-
-  const next =
-    catalogBook && seed?.nextChapterId ? readerChapterPath(catalogBook.id, seed.nextChapterId) : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -214,16 +296,7 @@ export default function ReadChapterPage() {
               </p>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link className={btnSecondary} to="/app/library">
-              Library
-            </Link>
-            {next ? (
-              <Link className={btnPrimary} to={next}>
-                Next chapter
-              </Link>
-            ) : null}
-          </div>
+          <ChapterNavLinks bookId={bookId} prevSlug={prevSlug} nextSlug={nextSlug} />
         </div>
       </div>
 
@@ -249,6 +322,10 @@ export default function ReadChapterPage() {
             </p>
           )}
         </div>
+      </div>
+
+      <div className="flex justify-center pb-8">
+        <ChapterNavLinks bookId={bookId} prevSlug={prevSlug} nextSlug={nextSlug} layout="footer" />
       </div>
     </div>
   );

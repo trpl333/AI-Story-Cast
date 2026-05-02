@@ -19,10 +19,20 @@ const STORE_FULL = "fullText";
 const STORE_CHAPTER = "chapterText";
 
 type FullTextRow = { bookId: string; text: string };
-type ChapterTextRow = { id: string; bookId: string; chapterSlug: string; text: string };
+export type ChapterTextRow = { id: string; bookId: string; chapterSlug: string; text: string; title?: string };
 
 function chapterRowId(bookId: string, chapterSlug: string): string {
   return `${bookId}::${chapterSlug}`;
+}
+
+/** Numeric `chapter-N` slugs sort in numeric order; others sort lexicographically. */
+export function sortChapterSlugs(slugs: readonly string[]): string[] {
+  return [...slugs].sort((a, b) => {
+    const ma = /^chapter-(\d+)$/.exec(a);
+    const mb = /^chapter-(\d+)$/.exec(b);
+    if (ma && mb) return Number(ma[1]) - Number(mb[1]);
+    return a.localeCompare(b);
+  });
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -58,14 +68,21 @@ export async function putFullText(bookId: string, text: string): Promise<void> {
   db.close();
 }
 
-export async function putChapterText(bookId: string, chapterSlug: string, text: string): Promise<void> {
+export async function putChapterText(
+  bookId: string,
+  chapterSlug: string,
+  text: string,
+  title?: string,
+): Promise<void> {
   const db = await openDb();
   const id = chapterRowId(bookId, chapterSlug);
+  const row: ChapterTextRow = { id, bookId, chapterSlug, text };
+  if (typeof title === "string" && title.length > 0) row.title = title;
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_CHAPTER, "readwrite");
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error("putChapterText transaction failed"));
-    tx.objectStore(STORE_CHAPTER).put({ id, bookId, chapterSlug, text } satisfies ChapterTextRow);
+    tx.objectStore(STORE_CHAPTER).put(row);
   });
   db.close();
 }
@@ -82,17 +99,49 @@ export async function getFullText(bookId: string): Promise<string | undefined> {
   return row?.text;
 }
 
-export async function getChapterText(bookId: string, chapterSlug: string): Promise<string | undefined> {
+export async function getChapterRecord(bookId: string, chapterSlug: string): Promise<ChapterTextRow | undefined> {
   const db = await openDb();
   const id = chapterRowId(bookId, chapterSlug);
   const row = await new Promise<ChapterTextRow | undefined>((resolve, reject) => {
     const tx = db.transaction(STORE_CHAPTER, "readonly");
     const req = tx.objectStore(STORE_CHAPTER).get(id);
     req.onsuccess = () => resolve(req.result as ChapterTextRow | undefined);
-    req.onerror = () => reject(req.error ?? new Error("getChapterText failed"));
+    req.onerror = () => reject(req.error ?? new Error("getChapterRecord failed"));
   });
   db.close();
+  return row;
+}
+
+export async function getChapterText(bookId: string, chapterSlug: string): Promise<string | undefined> {
+  const row = await getChapterRecord(bookId, chapterSlug);
   return row?.text;
+}
+
+/** Chapter slugs that have imported text (IndexedDB only; order not guaranteed). */
+export async function listImportedChapterSlugs(bookId: string): Promise<string[]> {
+  const db = await openDb();
+  const slugs = await new Promise<string[]>((resolve, reject) => {
+    const out: string[] = [];
+    const tx = db.transaction(STORE_CHAPTER, "readonly");
+    const index = tx.objectStore(STORE_CHAPTER).index("byBookId");
+    const req = index.openKeyCursor(IDBKeyRange.only(bookId));
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        resolve(out);
+        return;
+      }
+      const pk = String(cursor.primaryKey);
+      const prefix = `${bookId}::`;
+      if (pk.startsWith(prefix)) {
+        out.push(pk.slice(prefix.length));
+      }
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error ?? new Error("listImportedChapterSlugs failed"));
+  });
+  db.close();
+  return out;
 }
 
 export async function hasFullText(bookId: string): Promise<boolean> {
@@ -180,24 +229,42 @@ export async function migrateLegacyImportTextFromLocalStorage(): Promise<void> {
   }
 }
 
+export type ImportedChapterLoadResult = {
+  text: string | undefined;
+  /** Present when stored in IndexedDB (legacy localStorage chapter keys have no title). */
+  title?: string;
+};
+
 /**
- * Chapter body for the reader: IndexedDB first, then legacy localStorage (pre-migration).
+ * Chapter body for the reader: IndexedDB first (including optional `title`), then legacy localStorage.
  */
-export async function getImportedChapterRawWithLegacyFallback(
+export async function getImportedChapterWithLegacyFallback(
   bookId: string,
   chapterSlug: string,
-): Promise<string | undefined> {
-  const fromIdb = await getChapterText(bookId, chapterSlug);
-  if (typeof fromIdb === "string" && fromIdb.length > 0) return fromIdb;
+): Promise<ImportedChapterLoadResult> {
+  const row = await getChapterRecord(bookId, chapterSlug);
+  if (typeof row?.text === "string" && row.text.trim().length > 0) {
+    return { text: row.text, title: row.title };
+  }
 
-  if (typeof window === "undefined") return undefined;
+  if (typeof window === "undefined") return { text: undefined };
   try {
     let raw = window.localStorage.getItem(legacyLocalChapterKey(bookId, chapterSlug));
     if (!raw && bookId === "moby-dick" && chapterSlug === "chapter-1") {
       raw = window.localStorage.getItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
     }
-    return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+    const text = typeof raw === "string" && raw.length > 0 ? raw : undefined;
+    return { text, title: undefined };
   } catch {
-    return undefined;
+    return { text: undefined };
   }
+}
+
+/** @deprecated Prefer {@link getImportedChapterWithLegacyFallback} for optional chapter title. */
+export async function getImportedChapterRawWithLegacyFallback(
+  bookId: string,
+  chapterSlug: string,
+): Promise<string | undefined> {
+  const { text } = await getImportedChapterWithLegacyFallback(bookId, chapterSlug);
+  return text;
 }

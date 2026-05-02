@@ -44,8 +44,25 @@ export type SearchResult = {
   source: string;
   sourceUrl: string;
   description: string;
+  /** Legacy single-chapter slice; used when `chapterImports` is absent. */
   chapterImport?: ChapterImportConfig;
+  /**
+   * When set, every entry is imported (markers + optional proxy `chapters` payload).
+   * If omitted, `chapterImport` alone defines at most one chapter.
+   */
+  chapterImports?: ChapterImportConfig[];
 };
+
+/**
+ * Ordered chapter configs for import and reader navigation.
+ * Prefer `chapterImports` when non-empty; otherwise a single `chapterImport` if present.
+ */
+export function chapterConfigsForImport(sr: SearchResult | undefined): ChapterImportConfig[] {
+  if (!sr) return [];
+  if (sr.chapterImports && sr.chapterImports.length > 0) return sr.chapterImports;
+  if (sr.chapterImport) return [sr.chapterImport];
+  return [];
+}
 
 /** Shown on Library cards and shelf; upstream names stay in `SearchResult.source` only. */
 export const USER_FACING_SOURCE_LABEL = "Public domain classic";
