@@ -1,7 +1,7 @@
 import { publicAsset } from "@/lib/publicAsset";
 
 export type CatalogBookId = "pride" | "sherlock" | "frankenstein" | "oz" | "peter";
-export type LibraryBookId = "alice" | CatalogBookId;
+export type LibraryBookId = "alice" | "moby-dick" | CatalogBookId;
 
 /** Chapter row on book detail; `readerEnabled` false = disabled “Coming soon” in MVP. */
 export type ChapterListEntry = {
@@ -96,6 +96,27 @@ const SHERLOCK: LibraryBookDisplay = {
   chapters: SHERLOCK_CHAPTERS,
 };
 
+const MOBY_DICK_CHAPTERS: readonly ChapterListEntry[] = [
+  {
+    chapterId: "chapter-1",
+    label: "Chapter I — Loomings",
+    hasSeed: true,
+    readerEnabled: true,
+  },
+  { chapterId: "chapter-2", label: "Chapter II", hasSeed: false, readerEnabled: false },
+  { chapterId: "chapter-3", label: "Chapter III", hasSeed: false, readerEnabled: false },
+];
+
+const MOBY_DICK: LibraryBookDisplay = {
+  id: "moby-dick",
+  title: "Moby-Dick; or, The Whale",
+  author: "Herman Melville",
+  cover: publicAsset("assets/home/feat-04-context.jpg"),
+  description:
+    "A public domain classic about Captain Ahab’s obsessive hunt for the white whale. Chapter I opens with Ishmael’s famous call to the sea.",
+  chapters: MOBY_DICK_CHAPTERS,
+};
+
 const FRANKENSTEIN: LibraryBookDisplay = {
   id: "frankenstein",
   title: "Frankenstein",
@@ -128,6 +149,7 @@ const PETER: LibraryBookDisplay = {
 
 const BOOKS_BY_ID: ReadonlyMap<LibraryBookId, LibraryBookDisplay> = new Map([
   ["alice", ALICE_LIBRARY_BOOK],
+  ["moby-dick", MOBY_DICK],
   ["pride", PRIDE],
   ["sherlock", SHERLOCK],
   ["frankenstein", FRANKENSTEIN],
@@ -141,6 +163,7 @@ export const CATALOG_LIBRARY_BOOKS: readonly LibraryBookDisplay[] = [PRIDE, SHER
 export function isLibraryBookId(value: string): value is LibraryBookId {
   return (
     value === "alice" ||
+    value === "moby-dick" ||
     value === "pride" ||
     value === "sherlock" ||
     value === "frankenstein" ||
@@ -163,6 +186,11 @@ export function libraryBookPath(bookId: LibraryBookId): string {
   return `/app/books/${bookId}`;
 }
 
-export function readerChapterPath(bookId: LibraryBookId, chapterId: string): string {
+/** Reader URL for any book id (catalog or imported public-domain id). */
+export function readerChapterHref(bookId: string, chapterId: string): string {
   return `/app/read/${bookId}/${chapterId}`;
+}
+
+export function readerChapterPath(bookId: LibraryBookId, chapterId: string): string {
+  return readerChapterHref(bookId, chapterId);
 }

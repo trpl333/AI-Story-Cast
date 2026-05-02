@@ -140,6 +140,29 @@ const SHERLOCK_CHAPTER_1_SEGMENTS: StorySegment[] = SHERLOCK_CHAPTER_1_PARAGRAPH
   paragraphIndex: i,
 }));
 
+const MOBY_CHAPTER_1_PARAGRAPHS: ReaderParagraph[] = [
+  {
+    label: "Narrator",
+    text: "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world.",
+  },
+  {
+    label: "Narrator",
+    text: "It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; I account it high time to get to sea as soon as I can.",
+  },
+];
+
+/** Chapter I “Loomings” (public domain excerpt); bundled audio is a generic pilot clip until title-specific assets ship. */
+const MOBY_CHAPTER_1: ChapterSeed = {
+  bookId: "moby-dick",
+  chapterId: "chapter-1",
+  bookTitle: "Moby-Dick; or, The Whale",
+  author: "Herman Melville",
+  chapterTitle: "Loomings",
+  chapterNumberLabel: "Chapter I",
+  audioSrc: publicAsset("assets/demo/chapter1.mp3"),
+  paragraphs: MOBY_CHAPTER_1_PARAGRAPHS,
+};
+
 /** Opening of “A Scandal in Bohemia” (public domain); abridged for the in-app seed. */
 const SHERLOCK_CHAPTER_1: ChapterSeed = {
   bookId: "sherlock",
@@ -158,6 +181,7 @@ const SHERLOCK_CHAPTER_1: ChapterSeed = {
 const SEED_BY_KEY = new Map<string, ChapterSeed>([
   ["alice/chapter-1", ALICE_CHAPTER_1],
   ["sherlock/chapter-1", SHERLOCK_CHAPTER_1],
+  ["moby-dick/chapter-1", MOBY_CHAPTER_1],
 ]);
 
 export function getSeededChapter(bookId: string, chapterId: string): ChapterSeed | null {

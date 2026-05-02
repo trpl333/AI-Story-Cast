@@ -1,183 +1,259 @@
-import { useCallback, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
+import { readerChapterHref } from "@/data/libraryBooks";
 import {
-  ALICE_LIBRARY_BOOK,
-  CATALOG_LIBRARY_BOOKS,
-  isCatalogBookId,
-  libraryBookPath,
-  type CatalogBookId,
-} from "@/data/libraryBooks";
+  hasAnyImportedBookChapter,
+  hasImportedBookFullText,
+  readShelfBooksFromStorage,
+  writeShelfBooksToStorage,
+  type ImportedShelfBook,
+  type SearchResult,
+} from "@/lib/importedBookStorage";
+import { importBook } from "@/lib/importBook";
+import { searchPublicDomainBooks } from "@/lib/publicDomainSearch";
 
-const STORAGE_KEY = "aistorycast-library-added-catalog";
+const panelClass =
+  "rounded-2xl border border-[#E0D8CC] bg-white p-6 shadow-sm";
 
-function loadAddedCatalogIds(): CatalogBookId[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const out: CatalogBookId[] = [];
-    for (const item of parsed) {
-      if (isCatalogBookId(item) && !out.includes(item)) out.push(item);
-    }
-    return out;
-  } catch {
-    return [];
-  }
-}
+const btnPrimary =
+  "inline-flex items-center justify-center rounded-full bg-[#2C2416] px-5 py-2.5 text-sm font-semibold text-[#FAF8F4] transition-colors hover:bg-[#3D3220] disabled:cursor-not-allowed disabled:opacity-50";
 
-function saveAddedCatalogIds(ids: readonly CatalogBookId[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-}
-
-function catalogById(id: CatalogBookId) {
-  return CATALOG_LIBRARY_BOOKS.find((b) => b.id === id);
-}
+const btnSecondary =
+  "inline-flex items-center justify-center rounded-full border border-[#E0D8CC] bg-[#FDFBF7] px-5 py-2.5 text-sm font-semibold text-[#1C1A17] transition-colors hover:border-[#C4873A]/40";
 
 export default function LibraryPage() {
-  const [addedCatalogIds, setAddedCatalogIds] = useState<CatalogBookId[]>(() => loadAddedCatalogIds());
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchDone, setSearchDone] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [shelfBooks, setShelfBooks] = useState<ImportedShelfBook[]>(() => readShelfBooksFromStorage());
+  const [importingByBookId, setImportingByBookId] = useState<Record<string, boolean>>({});
+  const [importErrorByBookId, setImportErrorByBookId] = useState<Record<string, string>>({});
+  const [importSuccessByBookId, setImportSuccessByBookId] = useState<Record<string, string>>({});
+  const importLocksRef = useRef<Set<string>>(new Set());
 
-  const addToLibrary = useCallback((id: CatalogBookId) => {
-    setAddedCatalogIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const next = [...prev, id];
-      saveAddedCatalogIds(next);
+  useEffect(() => {
+    writeShelfBooksToStorage(shelfBooks);
+  }, [shelfBooks]);
+
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length > 0;
+
+  function isBookOnShelf(bookId: string): boolean {
+    return shelfBooks.some((b) => b.id === bookId);
+  }
+
+  async function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportErrorByBookId({});
+    setImportSuccessByBookId({});
+    if (!hasQuery) {
+      setSearchResults([]);
+      setSearchDone(false);
+      return;
+    }
+    setSearchLoading(true);
+    setSearchDone(false);
+    try {
+      const results = await searchPublicDomainBooks(trimmedQuery);
+      setSearchResults(results);
+      setSearchDone(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  async function handleAddToLibrary(searchResult: SearchResult) {
+    if (importLocksRef.current.has(searchResult.id)) return;
+    if (isBookOnShelf(searchResult.id)) return;
+
+    importLocksRef.current.add(searchResult.id);
+    setImportingByBookId((prev) => ({ ...prev, [searchResult.id]: true }));
+    setImportErrorByBookId((prev) => {
+      const next = { ...prev };
+      delete next[searchResult.id];
       return next;
     });
-  }, []);
 
-  const addedBooks = addedCatalogIds
-    .map((id) => catalogById(id))
-    .filter((b): b is NonNullable<typeof b> => b !== undefined);
-
-  const cardShell =
-    "group flex flex-col overflow-hidden rounded-2xl border border-[#E0D8CC] bg-white shadow-sm transition-all hover:border-[#C4B89A]";
+    try {
+      const outcome = await importBook(searchResult);
+      if (outcome.ok) {
+        setShelfBooks((prev) => {
+          if (prev.some((b) => b.id === outcome.shelfBook.id)) return prev;
+          return [...prev, outcome.shelfBook];
+        });
+        setImportSuccessByBookId((prev) => ({
+          ...prev,
+          [searchResult.id]: `${searchResult.title} has been imported and added to your library.`,
+        }));
+      } else {
+        setImportErrorByBookId((prev) => ({ ...prev, [searchResult.id]: outcome.message }));
+      }
+    } finally {
+      importLocksRef.current.delete(searchResult.id);
+      setImportingByBookId((prev) => {
+        const next = { ...prev };
+        delete next[searchResult.id];
+        return next;
+      });
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1
-        className="text-3xl font-bold text-[#1C1A17] md:text-4xl"
-        style={{ fontFamily: "'Playfair Display', serif" }}
-      >
-        My Library
-      </h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-        Your saved stories live here. Start with Alice, then add more classics as they become available.
-      </p>
+    <div className="mx-auto max-w-4xl space-y-8">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Library
+        </p>
+        <h1 className="mt-2 text-3xl font-bold text-[#1C1A17] md:text-4xl" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Search and import
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Search public-domain titles, import plain text locally, then open chapter 1 in the reader. Imports stay in this
+          browser only for now.
+        </p>
+      </div>
 
-      <section className="mt-10">
-        <h2
-          className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]"
-          style={{ fontFamily: "'Inter', sans-serif" }}
-        >
-          My Library
-        </h2>
-        <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Link
-            to={libraryBookPath("alice")}
-            className={`${cardShell} border-[#C4873A]/40 ring-1 ring-[#C4873A]/20`}
-          >
-            <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
-              <img
-                src={ALICE_LIBRARY_BOOK.cover}
-                alt=""
-                className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-              />
-            </div>
-            <div className="flex flex-1 flex-col p-5">
-              <span
-                className="mb-2 w-fit rounded-full bg-[#C4873A]/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#A66B2E]"
+      <section className={panelClass}>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Search
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Try <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
+              <span className="font-medium text-[#1C1A17]">sherlock</span>, or{" "}
+              <span className="font-medium text-[#1C1A17]">moby</span> — matching is local (title, author, or description).
+            </p>
+          </div>
+
+          <form className="space-y-4" onSubmit={handleSearchSubmit}>
+            <label className="block">
+              <span className="text-xs font-medium text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                Query
+              </span>
+              <input
+                className="mt-1 w-full rounded-xl border border-[#E0D8CC] bg-white px-4 py-2.5 text-sm text-[#1C1A17] outline-none ring-[#C4873A]/25 transition-shadow focus:ring-2"
                 style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Chapter I ready
-              </span>
-              <h3 className="text-lg font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
-                {ALICE_LIBRARY_BOOK.title}
-              </h3>
-              <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                {ALICE_LIBRARY_BOOK.author}
-              </p>
-              <span className="mt-4 text-sm font-semibold text-[#C4873A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Open book →
-              </span>
-            </div>
-          </Link>
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="e.g. Pride and Prejudice"
+                autoComplete="off"
+              />
+            </label>
 
-          {addedBooks.map((book) => (
-            <Link key={book.id} to={libraryBookPath(book.id)} className={cardShell}>
-              <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
-                <img
-                  src={book.cover}
-                  alt=""
-                  className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="flex flex-1 flex-col p-5">
-                <span
-                  className="mb-2 w-fit rounded-full bg-[#E8E0D4] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#5C5346]"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  In your library
-                </span>
-                <h3 className="text-lg font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  {book.title}
-                </h3>
-                <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  {book.author}
+            <div className="flex justify-end gap-3">
+              <button className={btnPrimary} type="submit" disabled={!hasQuery || searchLoading}>
+                {searchLoading ? "Searching…" : "Search"}
+              </button>
+            </div>
+          </form>
+
+          {searchDone ? (
+            <div className="space-y-4 border-t border-[#E8E0D4] pt-6">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                Results
+              </h2>
+              {searchResults.length === 0 ? (
+                <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  No matching books. Try another word from the title or author.
                 </p>
-                <span className="mt-4 text-sm font-semibold text-[#C4873A]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  View book →
-                </span>
-              </div>
-            </Link>
-          ))}
+              ) : (
+                <ul className="space-y-8">
+                  {searchResults.map((result) => {
+                    const onShelf = isBookOnShelf(result.id);
+                    const busy = Boolean(importingByBookId[result.id]);
+                    return (
+                      <li key={result.id} className="space-y-3 border-b border-[#F0EBE3] pb-8 last:border-0 last:pb-0">
+                        <p className="text-lg font-semibold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                          {result.title}
+                        </p>
+                        <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                          {result.author} · {result.source}
+                        </p>
+                        <p className="text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                          {result.description}
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            className={btnPrimary}
+                            type="button"
+                            onClick={() => void handleAddToLibrary(result)}
+                            disabled={onShelf || busy}
+                          >
+                            {onShelf ? "Already in my library" : busy ? "Importing…" : "Add to my library"}
+                          </button>
+                          <Link className={btnSecondary} to={readerChapterHref(result.id, "chapter-1")}>
+                            Start reading
+                          </Link>
+                        </div>
+                        {importErrorByBookId[result.id] ? (
+                          <p className="text-sm text-[#8B4513]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                            {importErrorByBookId[result.id]}
+                          </p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </div>
       </section>
 
-      <section className="mt-14">
-        <h2
-          className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]"
-          style={{ fontFamily: "'Inter', sans-serif" }}
-        >
-          Add a Book
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Tap a title to add it to your shelf. Open any book to preview chapters — full reader text ships title by title.
-        </p>
-        <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {CATALOG_LIBRARY_BOOKS.map((book) => {
-            const inLibrary = addedCatalogIds.includes(book.id);
-            return (
-              <div key={book.id} className={cardShell}>
-                <div className="aspect-[4/3] overflow-hidden bg-[#F5F0E8]">
-                  <img
-                    src={book.cover}
-                    alt=""
-                    className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col p-5">
-                  <h3 className="text-lg font-bold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
+      <section className={panelClass}>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              My shelf
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Imported books are stored locally in this browser for now.
+            </p>
+          </div>
+
+          {Object.keys(importSuccessByBookId).length > 0 ? (
+            <ul className="space-y-2">
+              {Object.entries(importSuccessByBookId).map(([bookId, msg]) => (
+                <li key={bookId} className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  {msg}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {shelfBooks.length === 0 ? (
+            <p className="text-sm text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              No books on your shelf yet.
+            </p>
+          ) : (
+            <ul className="space-y-6">
+              {shelfBooks.map((book) => (
+                <li key={book.id} className="space-y-2 border-b border-[#F0EBE3] pb-6 last:border-0 last:pb-0">
+                  <p className="font-semibold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
                     {book.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {book.author}
                   </p>
-                  <button
-                    type="button"
-                    disabled={inLibrary}
-                    onClick={() => addToLibrary(book.id)}
-                    className="mt-4 w-full rounded-xl border border-[#D9CFBC] bg-[#FDFBF7] px-4 py-2.5 text-sm font-semibold text-[#1C1A17] transition-colors hover:border-[#C4873A] hover:bg-[#F5EFE3] disabled:cursor-not-allowed disabled:border-[#E8E0D4] disabled:bg-[#F5F0E8] disabled:text-[#8B7B6B]"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
-                  >
-                    {inLibrary ? "In your library" : "Add to my library"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                  <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {book.author} · {book.source}
+                  </p>
+                  {hasImportedBookFullText(book.id) ? (
+                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Full text saved locally for this book.
+                    </p>
+                  ) : null}
+                  {hasAnyImportedBookChapter(book.id) ? (
+                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Imported chapter text is ready for the reader.
+                    </p>
+                  ) : null}
+                  <Link className={`${btnSecondary} mt-2 inline-flex`} to={readerChapterHref(book.id, "chapter-1")}>
+                    Open in reader
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>
