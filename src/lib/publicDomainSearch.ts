@@ -89,6 +89,14 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
     source: "Project Gutenberg",
     sourceUrl: "https://www.gutenberg.org/files/158/158-0.txt",
     description: "Jane Austen’s comedy of manners about matchmaking, self-deception, and growing up.",
+    chapterImport: {
+      chapterSlug: "chapter-1",
+      title: "Chapter I",
+      // Gutenberg #158: TOC then body; Volume I Chapter I opens with Emma’s introduction; Chapter II follows.
+      startMarker: "VOLUME I\n\n\n\n\nCHAPTER I\n\n\nEmma Woodhouse, handsome, clever, and rich",
+      endMarker: "\n\n\n\n\nCHAPTER II\n\n\nMr. Weston was a native of Highbury",
+      startMarkerOccurrenceIndex: 0,
+    },
   },
 ];
 
