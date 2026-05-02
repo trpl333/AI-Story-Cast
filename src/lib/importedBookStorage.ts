@@ -140,3 +140,29 @@ export function hasAnyImportedBookChapter(bookId: string): boolean {
   }
   return false;
 }
+
+/**
+ * Removes saved full text and every `aistorycast-book-chapter-${bookId}-*` key (plus legacy Moby chapter key when applicable).
+ * Does not modify the shelf JSON array; callers should update shelf state separately.
+ */
+export function clearImportedBookStoredText(bookId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(getBookTextStorageKey(bookId));
+    const prefix = `aistorycast-book-chapter-${bookId}-`;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+      keysToRemove.push(k);
+    }
+    for (const k of keysToRemove) {
+      window.localStorage.removeItem(k);
+    }
+    if (bookId === "moby-dick") {
+      window.localStorage.removeItem(LEGACY_MOBY_CHAPTER_1_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}

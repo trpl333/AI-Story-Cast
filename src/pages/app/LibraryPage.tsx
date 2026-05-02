@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { readerChapterHref } from "@/data/libraryBooks";
 import {
+  clearImportedBookStoredText,
   hasAnyImportedBookChapter,
   hasImportedBookFullText,
   readShelfBooksFromStorage,
@@ -11,7 +12,7 @@ import {
   type SearchResult,
 } from "@/lib/importedBookStorage";
 import { importBook, IMPORT_SERVICE_NOT_CONNECTED } from "@/lib/importBook";
-import { searchPublicDomainBooks } from "@/lib/publicDomainSearch";
+import { getPublicDomainSearchResultById, searchPublicDomainBooks } from "@/lib/publicDomainSearch";
 
 const panelClass =
   "rounded-2xl border border-[#E0D8CC] bg-white p-6 shadow-sm";
@@ -22,6 +23,9 @@ const btnPrimary =
 const btnSecondary =
   "inline-flex items-center justify-center rounded-full border border-[#E0D8CC] bg-[#FDFBF7] px-5 py-2.5 text-sm font-semibold text-[#1C1A17] transition-colors hover:border-[#C4873A]/40";
 
+const btnDanger =
+  "inline-flex items-center justify-center rounded-full border border-[#E8C4C4] bg-[#FFF8F8] px-5 py-2.5 text-sm font-semibold text-[#8B2E2E] transition-colors hover:border-[#C4873A]/40";
+
 export default function LibraryPage() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -31,6 +35,7 @@ export default function LibraryPage() {
   const [importingByBookId, setImportingByBookId] = useState<Record<string, boolean>>({});
   const [importErrorByBookId, setImportErrorByBookId] = useState<Record<string, string>>({});
   const [importSuccessByBookId, setImportSuccessByBookId] = useState<Record<string, string>>({});
+  const [reimportErrorByBookId, setReimportErrorByBookId] = useState<Record<string, string>>({});
   const importLocksRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -61,6 +66,71 @@ export default function LibraryPage() {
       setSearchDone(true);
     } finally {
       setSearchLoading(false);
+    }
+  }
+
+  function handleRemoveFromShelf(book: ImportedShelfBook) {
+    clearImportedBookStoredText(book.id);
+    setShelfBooks((prev) => prev.filter((b) => b.id !== book.id));
+    setReimportErrorByBookId((prev) => {
+      const next = { ...prev };
+      delete next[book.id];
+      return next;
+    });
+    setImportSuccessByBookId((prev) => {
+      const next = { ...prev };
+      delete next[book.id];
+      return next;
+    });
+  }
+
+  async function handleReimportFromShelf(book: ImportedShelfBook) {
+    if (importLocksRef.current.has(book.id)) return;
+    const catalog = getPublicDomainSearchResultById(book.id);
+    if (!catalog) {
+      setReimportErrorByBookId((prev) => ({
+        ...prev,
+        [book.id]: "Could not re-import this book because its catalog source is unavailable.",
+      }));
+      return;
+    }
+
+    importLocksRef.current.add(book.id);
+    setImportingByBookId((prev) => ({ ...prev, [book.id]: true }));
+    setReimportErrorByBookId((prev) => {
+      const next = { ...prev };
+      delete next[book.id];
+      return next;
+    });
+
+    try {
+      const outcome = await importBook(catalog);
+      if (outcome.ok) {
+        setShelfBooks((prev) => {
+          const idx = prev.findIndex((b) => b.id === outcome.shelfBook.id);
+          if (idx === -1) return [...prev, outcome.shelfBook];
+          const next = [...prev];
+          next[idx] = outcome.shelfBook;
+          return next;
+        });
+        setImportSuccessByBookId((prev) => ({
+          ...prev,
+          [book.id]: `${book.title} has been re-imported.`,
+        }));
+      } else {
+        const msg =
+          outcome.code === IMPORT_SERVICE_NOT_CONNECTED
+            ? "Import service is not connected yet."
+            : outcome.message;
+        setReimportErrorByBookId((prev) => ({ ...prev, [book.id]: msg }));
+      }
+    } finally {
+      importLocksRef.current.delete(book.id);
+      setImportingByBookId((prev) => {
+        const next = { ...prev };
+        delete next[book.id];
+        return next;
+      });
     }
   }
 
@@ -114,9 +184,8 @@ export default function LibraryPage() {
           Search and import
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          This page is a starter catalog preview: search works today, and more titles will appear over time. Book import
-          will connect next once the import service is wired up; until then you can still open titles that already have
-          reader content from the rest of the app.
+          Imported books are saved locally in this browser. Use <span className="font-medium text-[#1C1A17]">My shelf</span>{" "}
+          below to open the reader, remove a title, or re-import when catalog markers change.
         </p>
       </div>
 
@@ -127,10 +196,11 @@ export default function LibraryPage() {
               Search
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Search the starter catalog (not a full web search). Try words from the title or author — e.g.{" "}
+              Search currently checks the starter public-domain catalog only. More titles and full catalog search are coming
+              next. Try words from the title or author — e.g.{" "}
               <span className="font-medium text-[#1C1A17]">emma</span>,{" "}
               <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
-              <span className="font-medium text-[#1C1A17]">moby</span>. Import from here is coming next.
+              <span className="font-medium text-[#1C1A17]">moby</span>.
             </p>
           </div>
 
@@ -236,29 +306,51 @@ export default function LibraryPage() {
             </p>
           ) : (
             <ul className="space-y-6">
-              {shelfBooks.map((book) => (
-                <li key={book.id} className="space-y-2 border-b border-[#F0EBE3] pb-6 last:border-0 last:pb-0">
-                  <p className="font-semibold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
-                    {book.title}
-                  </p>
-                  <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {book.author} · {USER_FACING_SOURCE_LABEL}
-                  </p>
-                  {hasImportedBookFullText(book.id) ? (
-                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      Full text saved locally for this book.
+              {shelfBooks.map((book) => {
+                const hasText = hasImportedBookFullText(book.id);
+                const hasChapter = hasAnyImportedBookChapter(book.id);
+                const shelfBusy = Boolean(importingByBookId[book.id]);
+                const shelfStatus =
+                  hasText && hasChapter
+                    ? "Full text and chapter text saved locally."
+                    : hasText
+                      ? "Full text saved locally. Chapter text is not ready yet."
+                      : "Book is on your shelf, but local text is missing.";
+                return (
+                  <li key={book.id} className="space-y-2 border-b border-[#F0EBE3] pb-6 last:border-0 last:pb-0">
+                    <p className="font-semibold text-[#1C1A17]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      {book.title}
                     </p>
-                  ) : null}
-                  {hasAnyImportedBookChapter(book.id) ? (
-                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      Imported chapter text is ready for the reader.
+                    <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {book.author} · {USER_FACING_SOURCE_LABEL}
                     </p>
-                  ) : null}
-                  <Link className={`${btnSecondary} mt-2 inline-flex`} to={readerChapterHref(book.id, "chapter-1")}>
-                    Open in reader
-                  </Link>
-                </li>
-              ))}
+                    <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {shelfStatus}
+                    </p>
+                    {reimportErrorByBookId[book.id] ? (
+                      <p className="text-sm text-[#8B4513]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {reimportErrorByBookId[book.id]}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <Link className={btnSecondary} to={readerChapterHref(book.id, "chapter-1")}>
+                        Open in reader
+                      </Link>
+                      <button
+                        className={btnSecondary}
+                        type="button"
+                        disabled={shelfBusy}
+                        onClick={() => void handleReimportFromShelf(book)}
+                      >
+                        {shelfBusy ? "Re-importing…" : "Re-import"}
+                      </button>
+                      <button className={btnDanger} type="button" disabled={shelfBusy} onClick={() => handleRemoveFromShelf(book)}>
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

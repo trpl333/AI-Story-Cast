@@ -98,6 +98,24 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       startMarkerOccurrenceIndex: 0,
     },
   },
+  {
+    id: "great-expectations",
+    title: "Great Expectations",
+    author: "Charles Dickens",
+    source: "Project Gutenberg",
+    sourceUrl: "https://www.gutenberg.org/files/1400/1400-0.txt",
+    description: "A coming-of-age novel about Pip, fortune, ambition, love, and class.",
+    chapterImport: {
+      chapterSlug: "chapter-1",
+      title: "Chapter I",
+      // Gutenberg #1400 (1867 ed., UTF-8): Contents list uses leading spaces; body “Chapter I.” is followed by Pip’s opening; curly apostrophe in father’s.
+      startMarker:
+        "Chapter I.\n\n\nMy father\u2019s family name being Pirrip, and my Christian name Philip",
+      endMarker:
+        "\n\n\n\n\nChapter II.\n\n\nMy sister, Mrs. Joe Gargery, was more than twenty years older than I",
+      startMarkerOccurrenceIndex: 0,
+    },
+  },
 ];
 
 function haystackFor(result: SearchResult): string {
