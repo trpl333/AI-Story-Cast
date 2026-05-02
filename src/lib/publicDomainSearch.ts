@@ -1,7 +1,8 @@
 import type { SearchResult } from "@/lib/importedBookStorage";
 
 /**
- * Local mock catalog (no network). Replace with a real adapter when a discovery API exists.
+ * Early curated public-domain starter catalog (local only). `source` / `sourceUrl` are kept for
+ * import/proxy; Library UI shows `USER_FACING_SOURCE_LABEL` from `importedBookStorage` instead of `source`.
  */
 const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
   {
@@ -81,6 +82,14 @@ const PUBLIC_DOMAIN_MOCK_CATALOG: readonly SearchResult[] = [
       endMarker: "\n\nChapter 2\n\n",
     },
   },
+  {
+    id: "emma",
+    title: "Emma",
+    author: "Jane Austen",
+    source: "Project Gutenberg",
+    sourceUrl: "https://www.gutenberg.org/files/158/158-0.txt",
+    description: "Jane Austen’s comedy of manners about matchmaking, self-deception, and growing up.",
+  },
 ];
 
 function haystackFor(result: SearchResult): string {
@@ -89,7 +98,8 @@ function haystackFor(result: SearchResult): string {
 
 /**
  * Case-insensitive match: every whitespace-separated token in `query` must appear
- * somewhere in the title, author, or description.
+ * somewhere in the title, author, or description. Only titles in the starter catalog match
+ * (e.g. “lord of the flies” returns no rows — copyrighted works are not listed).
  */
 export async function searchPublicDomainBooks(query: string): Promise<SearchResult[]> {
   const trimmed = query.trim().toLowerCase();

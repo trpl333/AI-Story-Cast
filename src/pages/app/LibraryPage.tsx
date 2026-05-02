@@ -5,6 +5,7 @@ import {
   hasAnyImportedBookChapter,
   hasImportedBookFullText,
   readShelfBooksFromStorage,
+  USER_FACING_SOURCE_LABEL,
   writeShelfBooksToStorage,
   type ImportedShelfBook,
   type SearchResult,
@@ -109,8 +110,8 @@ export default function LibraryPage() {
           Search and import
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Search public-domain titles, import plain text locally, then open chapter 1 in the reader. Imports stay in this
-          browser only for now.
+          Search the starter public-domain catalog. More titles coming soon. Import plain text into this browser, then
+          open chapter 1 in the reader.
         </p>
       </div>
 
@@ -121,9 +122,10 @@ export default function LibraryPage() {
               Search
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Try <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
-              <span className="font-medium text-[#1C1A17]">sherlock</span>, or{" "}
-              <span className="font-medium text-[#1C1A17]">moby</span> — matching is local (title, author, or description).
+              This is an early curated public-domain catalog, not a full web search. Try words from the title or author
+              (e.g. <span className="font-medium text-[#1C1A17]">emma</span>,{" "}
+              <span className="font-medium text-[#1C1A17]">dracula</span>,{" "}
+              <span className="font-medium text-[#1C1A17]">moby</span>).
             </p>
           </div>
 
@@ -156,7 +158,7 @@ export default function LibraryPage() {
               </h2>
               {searchResults.length === 0 ? (
                 <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  No matching books. Try another word from the title or author.
+                  No match in the starter catalog yet.
                 </p>
               ) : (
                 <ul className="space-y-8">
@@ -169,7 +171,7 @@ export default function LibraryPage() {
                           {result.title}
                         </p>
                         <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                          {result.author} · {result.source}
+                          {result.author} · {USER_FACING_SOURCE_LABEL}
                         </p>
                         <p className="text-sm leading-relaxed text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
                           {result.description}
@@ -235,7 +237,7 @@ export default function LibraryPage() {
                     {book.title}
                   </p>
                   <p className="text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {book.author} · {book.source}
+                    {book.author} · {USER_FACING_SOURCE_LABEL}
                   </p>
                   {hasImportedBookFullText(book.id) ? (
                     <p className="text-xs text-[#8B7B6B]" style={{ fontFamily: "'Inter', sans-serif" }}>

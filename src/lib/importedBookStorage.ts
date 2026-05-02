@@ -33,11 +33,15 @@ export type SearchResult = {
   id: string;
   title: string;
   author: string;
+  /** Internal catalog / rights provenance (not shown in Library UI). */
   source: string;
   sourceUrl: string;
   description: string;
   chapterImport?: ChapterImportConfig;
 };
+
+/** Shown on Library cards and shelf; upstream names stay in `SearchResult.source` only. */
+export const USER_FACING_SOURCE_LABEL = "Public domain classic";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
