@@ -28,6 +28,14 @@ export default function AppShell() {
         <i className="ri-book-open-line text-lg" aria-hidden />
         Library
       </NavLink>
+      <NavLink to="/app/discover" className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
+        <i className="ri-compass-3-line text-lg" aria-hidden />
+        Discover
+      </NavLink>
+      <NavLink to="/app/upload" className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
+        <i className="ri-upload-cloud-2-line text-lg" aria-hidden />
+        Upload
+      </NavLink>
       <NavLink to={libraryBookPath("alice")} className={navClass} onClick={() => setMobileNavOpen(false)} style={{ fontFamily: "'Inter', sans-serif" }}>
         <i className="ri-book-read-line text-lg" aria-hidden />
         Reader

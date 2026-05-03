@@ -67,6 +67,9 @@ export function chapterConfigsForImport(sr: SearchResult | undefined): ChapterIm
 /** Shown on Library cards and shelf; upstream names stay in `SearchResult.source` only. */
 export const USER_FACING_SOURCE_LABEL = "Public domain classic";
 
+/** Stored on `ImportedShelfBook.source` for browser-uploaded titles. */
+export const UPLOADED_FILE_SOURCE_LABEL = "Uploaded file";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -198,7 +198,7 @@ export default function ReadChapterPage() {
           Book not found
         </h1>
         <p className="mt-3 text-sm text-[#5C5346]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          This title is not in the reader yet. Search and import it from the Library first.
+          This title is not in the reader yet. Add it from Discover, upload a .txt from Upload, or import from My Library.
         </p>
         <Link className={`${btnPrimary} mt-8`} to="/app/library">
           Back to Library

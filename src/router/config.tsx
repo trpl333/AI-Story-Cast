@@ -8,6 +8,8 @@ import LoginPage from "../pages/auth/LoginPage";
 import SignupPage from "../pages/auth/SignupPage";
 import DashboardPage from "../pages/app/DashboardPage";
 import LibraryPage from "../pages/app/LibraryPage";
+import DiscoverPage from "../pages/app/DiscoverPage";
+import UploadBookPage from "../pages/app/UploadBookPage";
 import AccountPage from "../pages/app/AccountPage";
 import ReadChapterPage from "../pages/app/ReadChapterPage";
 import BookDetailPage from "../pages/app/BookDetailPage";
@@ -45,6 +47,8 @@ const routes: RouteObject[] = [
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "library", element: <LibraryPage /> },
+          { path: "discover", element: <DiscoverPage /> },
+          { path: "upload", element: <UploadBookPage /> },
           { path: "books/:bookId", element: <BookDetailPage /> },
           { path: "read/:bookId/:chapterId", element: <ReadChapterPage /> },
           { path: "account", element: <AccountPage /> },
