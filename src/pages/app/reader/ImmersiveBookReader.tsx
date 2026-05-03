@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ReaderParagraph } from "@/data/curatedChapters";
-import { requestSceneImage } from "@/lib/aistorycastSceneImage";
+import { requestSceneImage, revokeSceneObjectUrl } from "@/lib/aistorycastSceneImage";
 import { chunkParagraphsIntoPages, paragraphsToPlainText } from "./bookPagination";
 import { ReaderChapterNav } from "./ReaderChapterNav";
 
-type TextMode = "exact" | "enhanced";
+const paperTextureBg = [
+  "linear-gradient(to bottom, rgba(255,255,255,0.14) 0%, transparent 42%)",
+  "repeating-linear-gradient(0deg, transparent 0px, transparent 22px, rgba(90,72,52,0.045) 22px, rgba(90,72,52,0.045) 23px)",
+  "repeating-linear-gradient(90deg, transparent 0px, transparent 31px, rgba(70,55,40,0.03) 31px, rgba(70,55,40,0.03) 32px)",
+  "linear-gradient(145deg, #faf4e8 0%, #efe4d4 38%, #e8dcc4 100%)",
+].join(", ");
 
 function useReaderLayout() {
   const [wide, setWide] = useState(() =>
@@ -23,54 +28,57 @@ function useReaderLayout() {
   return { wide, maxCharsPerPage };
 }
 
-function PageFace(props: {
-  paragraphs: ReaderParagraph[];
-  textMode: TextMode;
-  side: "left" | "right";
-  empty?: boolean;
-}) {
-  const { paragraphs, textMode, side, empty } = props;
+/** Renders imported/seed paragraphs only. Enhanced narration text is not wired in the reader yet. */
+function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"; empty?: boolean }) {
+  const { paragraphs, side, empty } = props;
+  const curlRadius = side === "left" ? "2px 3px 6px 2px" : "3px 2px 2px 6px";
 
   return (
     <div
       className={[
-        "relative flex min-h-[min(52vh,420px)] flex-1 flex-col overflow-hidden rounded-sm border shadow-inner sm:min-h-[min(58vh,520px)]",
-        side === "left"
-          ? "border-[#4a3c28]/40 bg-gradient-to-br from-[#f7eedc] via-[#efe4cf] to-[#e8d9c0]"
-          : "border-[#4a3c28]/40 bg-gradient-to-bl from-[#f7eedc] via-[#efe4cf] to-[#e8d9c0]",
-        empty ? "items-center justify-center opacity-60" : "",
+        "relative flex min-h-[min(50vh,400px)] flex-1 flex-col overflow-hidden sm:min-h-[min(56vh,500px)] lg:min-h-[min(58vh,540px)]",
+        empty ? "items-center justify-center opacity-55" : "",
       ].join(" ")}
       style={{
+        borderRadius: curlRadius,
+        backgroundImage: empty ? "linear-gradient(145deg, #e8dcc4 0%, #ddd0bc 100%)" : paperTextureBg,
+        backgroundColor: "#efe4d4",
         boxShadow:
           side === "left"
-            ? "inset 6px 0 24px rgba(62,48,28,0.12), inset 0 -3px 0 rgba(255,255,255,0.35)"
-            : "inset -6px 0 24px rgba(62,48,28,0.12), inset 0 -3px 0 rgba(255,255,255,0.35)",
+            ? "inset 5px 0 18px rgba(45,35,22,0.1), inset 0 -4px 12px rgba(255,255,255,0.45), 6px 10px 28px rgba(0,0,0,0.28), -1px 0 0 rgba(62,48,28,0.08)"
+            : "inset -5px 0 18px rgba(45,35,22,0.1), inset 0 -4px 12px rgba(255,255,255,0.45), -6px 10px 28px rgba(0,0,0,0.28), 1px 0 0 rgba(62,48,28,0.08)",
+        border: "1px solid rgba(62,48,28,0.12)",
       }}
     >
+      {!empty && (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-50"
+          style={{
+            background:
+              side === "left"
+                ? "linear-gradient(90deg, rgba(255,255,255,0.35) 0%, transparent 18%, transparent 100%)"
+                : "linear-gradient(270deg, rgba(255,255,255,0.35) 0%, transparent 18%, transparent 100%)",
+          }}
+        />
+      )}
       {empty ? (
         <p className="text-center font-serif text-sm italic text-[#6b5c48]">—</p>
-      ) : textMode === "enhanced" ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-8 text-center">
-          <p className="text-sm font-medium text-[#5c4a38]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Enhanced text
-          </p>
-          <p className="max-w-sm text-[0.95rem] leading-relaxed italic text-[#6b5c48]" style={{ fontFamily: "'Lora', Georgia, serif" }}>
-            Enhanced text generation coming next. Switch to Exact text to read this page.
-          </p>
-        </div>
       ) : (
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+        <div className="relative z-[1] flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-7 sm:py-7">
           {paragraphs.map((p, idx) => (
             <div key={idx}>
               <p
-                className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#7a6548]"
+                className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[#6e5c42]"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 {p.label}
               </p>
               <p
-                className="mt-1.5 text-[0.95rem] leading-[1.65] text-[#2a2118] sm:text-[1.02rem]"
-                style={{ fontFamily: "'Lora', 'Georgia', serif" }}
+                className="mt-1.5 text-[0.95rem] leading-[1.72] text-[#241c14] sm:text-[1.03rem]"
+                style={{
+                  fontFamily: "'Lora', 'Georgia', serif",
+                  textShadow: "0 0.5px 0 rgba(255,255,255,0.35)",
+                }}
               >
                 <span className="whitespace-pre-wrap">{p.text}</span>
               </p>
@@ -101,25 +109,43 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
   const pages = useMemo(() => chunkParagraphsIntoPages(paragraphs, maxCharsPerPage), [paragraphs, maxCharsPerPage]);
 
   const [flatLeftIndex, setFlatLeftIndex] = useState(0);
-  const [textMode, setTextMode] = useState<TextMode>("exact");
   const [sceneUrl, setSceneUrl] = useState<string | null>(null);
   const [sceneFilename, setSceneFilename] = useState<string | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [sceneLoading, setSceneLoading] = useState(false);
+  const sceneBlobUrlRef = useRef<string | null>(null);
 
   const lastSpreadStart = pages.length <= 1 ? 0 : Math.floor((pages.length - 1) / 2) * 2;
   const effectiveMaxLeft = wide ? lastSpreadStart : Math.max(0, pages.length - 1);
 
+  const replaceSceneUrl = useCallback((next: string | null) => {
+    if (sceneBlobUrlRef.current && sceneBlobUrlRef.current !== next) {
+      revokeSceneObjectUrl(sceneBlobUrlRef.current);
+      sceneBlobUrlRef.current = null;
+    }
+    if (next?.startsWith("blob:")) {
+      sceneBlobUrlRef.current = next;
+    }
+    setSceneUrl(next);
+  }, []);
+
   useEffect(() => {
     setFlatLeftIndex(0);
-    setSceneUrl(null);
+    replaceSceneUrl(null);
     setSceneFilename(null);
     setSceneError(null);
-  }, [bookId, chapterSlug]);
+  }, [bookId, chapterSlug, replaceSceneUrl]);
 
   useEffect(() => {
     setFlatLeftIndex((i) => Math.min(i, effectiveMaxLeft));
   }, [effectiveMaxLeft]);
+
+  useEffect(() => {
+    return () => {
+      revokeSceneObjectUrl(sceneBlobUrlRef.current);
+      sceneBlobUrlRef.current = null;
+    };
+  }, []);
 
   const clampedLeft = Math.min(flatLeftIndex, Math.max(0, effectiveMaxLeft));
   const leftPage = pages[clampedLeft] ?? [];
@@ -156,19 +182,21 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
     const result = await requestSceneImage(spreadPlainText);
     setSceneLoading(false);
     if (result.ok) {
-      setSceneUrl(result.url);
+      replaceSceneUrl(result.url);
       setSceneFilename(result.filename ?? null);
     } else {
-      setSceneUrl(null);
+      replaceSceneUrl(null);
       setSceneFilename(null);
       setSceneError(result.error);
     }
-  }, [spreadPlainText]);
+  }, [spreadPlainText, replaceSceneUrl]);
 
   const spreadLabel =
     wide && rightPage && rightPage.length > 0
       ? `Spread ${Math.floor(clampedLeft / 2) + 1} · pages ${clampedLeft + 1}–${clampedLeft + 2}`
       : `Page ${clampedLeft + 1} of ${pages.length}`;
+
+  const pageTurnY = wide ? "6deg" : "3deg";
 
   return (
     <div
@@ -191,7 +219,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
         }}
       />
 
-      <div className="relative z-[1] mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:max-w-[88rem] lg:px-8">
+      <div className="relative z-[1] mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:max-w-[92rem] lg:px-10">
         <nav
           className="mb-6 flex flex-wrap items-center gap-2 text-xs text-[#b9a88a]"
           style={{ fontFamily: "'Inter', sans-serif" }}
@@ -217,7 +245,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_min(100%,300px)] lg:items-start lg:gap-10">
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-            <header className="mb-5 text-center">
+            <header className="mb-6 text-center">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[#9a8470]" style={{ fontFamily: "'Inter', sans-serif" }}>
                 Now reading
               </p>
@@ -237,63 +265,107 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               ) : null}
             </header>
 
-            {/* Pedestal + open book */}
-            <div className="relative mx-auto max-w-5xl">
+            {/* Pedestal + open book (3D + leather) */}
+            <div className="relative mx-auto max-w-[58rem] px-1 sm:px-2">
               <div
-                className="absolute -bottom-4 left-1/2 h-24 w-[min(92%,520px)] -translate-x-1/2 rounded-[50%] blur-md"
+                className="absolute -bottom-2 left-1/2 h-28 w-[min(94%,560px)] -translate-x-1/2 rounded-[50%] blur-lg"
                 style={{
-                  background: "radial-gradient(ellipse at center, rgba(201,162,39,0.25) 0%, transparent 70%)",
+                  background: "radial-gradient(ellipse at center, rgba(201,162,39,0.28) 0%, transparent 72%)",
                 }}
               />
               <div
-                className="absolute bottom-0 left-1/2 h-10 w-[min(88%,480px)] -translate-x-1/2 rounded-sm opacity-90"
+                className="absolute bottom-0 left-1/2 h-12 w-[min(90%,500px)] -translate-x-1/2 rounded-sm"
                 style={{
-                  background: "linear-gradient(to bottom, #3d2a18, #1a120c)",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.65)",
+                  background: "linear-gradient(to bottom, #453220, #120d0a)",
+                  boxShadow: "0 18px 40px rgba(0,0,0,0.72)",
                 }}
               />
 
               <div
-                className="relative rounded-lg p-3 sm:p-5"
-                style={{
-                  background: "linear-gradient(145deg, #2a1d14 0%, #1f1610 40%, #261a12 100%)",
-                  boxShadow:
-                    "0 0 0 1px rgba(201,162,39,0.12), 0 24px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
-                }}
+                className="relative mx-auto pb-10 pt-2"
+                style={{ perspective: "2400px", perspectiveOrigin: "50% 35%" }}
               >
-                {/* Leather frame */}
+                {/* Leather case (visible behind / under pages) */}
                 <div
-                  className="rounded-md p-2 sm:p-3"
+                  className="absolute left-1/2 top-6 z-0 w-[calc(100%-4px)] max-w-[52rem] -translate-x-1/2 rounded-[14px] sm:top-8"
                   style={{
-                    background: "linear-gradient(160deg, #4a3020 0%, #2c1c12 50%, #3d2818 100%)",
-                    boxShadow: "inset 0 2px 8px rgba(0,0,0,0.4)",
+                    height: "calc(100% - 0.5rem)",
+                    minHeight: "min(62vh, 560px)",
+                    background:
+                      "linear-gradient(168deg, #5c3d28 0%, #2a1a12 22%, #1f1410 55%, #3d2818 88%, #4a3220 100%)",
+                    boxShadow:
+                      "0 0 0 1px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.08), inset 0 -12px 24px rgba(0,0,0,0.55), 0 28px 56px rgba(0,0,0,0.65)",
+                    transform: "translateZ(-14px) scale(1.03)",
+                    transformStyle: "preserve-3d",
+                  }}
+                />
+
+                <div
+                  className="relative z-[1] mx-auto max-w-[52rem] rounded-xl p-3 sm:p-4"
+                  style={{
+                    background: "linear-gradient(150deg, rgba(36,24,16,0.95) 0%, rgba(18,12,8,0.98) 100%)",
+                    boxShadow:
+                      "0 0 0 1px rgba(201,162,39,0.15), 0 32px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    transformStyle: "preserve-3d",
                   }}
                 >
-                  <div className="flex flex-col gap-0 sm:flex-row sm:items-stretch">
-                    <PageFace paragraphs={leftPage} textMode={textMode} side="left" />
-                    {/* Spine */}
+                  <div
+                    className="rounded-lg p-2 sm:p-2.5"
+                    style={{
+                      background:
+                        "linear-gradient(165deg, #3d2818 0%, #241810 40%, #2e1e14 70%, #423018 100%), repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
+                      boxShadow: "inset 0 3px 12px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(255,255,255,0.04)",
+                    }}
+                  >
                     <div
-                      className="hidden w-3 shrink-0 sm:block"
-                      style={{
-                        background: "linear-gradient(90deg, #1a120c, #3d2e22 45%, #1a120c)",
-                        boxShadow: "inset 0 0 12px rgba(0,0,0,0.9)",
-                      }}
-                    />
-                    {wide ? (
-                      <PageFace
-                        paragraphs={rightPage ?? []}
-                        textMode={textMode}
-                        side="right"
-                        empty={!rightPage || rightPage.length === 0}
+                      className="flex flex-col items-stretch justify-center gap-0 sm:flex-row"
+                      style={{ transformStyle: "preserve-3d" }}
+                    >
+                      <div
+                        className="min-w-0 flex-1 sm:max-w-[min(50%,24rem)] lg:max-w-[min(50%,26rem)]"
+                        style={{
+                          transform: `rotateY(${pageTurnY})`,
+                          transformOrigin: "right center",
+                          transformStyle: "preserve-3d",
+                        }}
+                      >
+                        <PageFace paragraphs={leftPage} side="left" />
+                      </div>
+
+                      {/* Gutter / spine shadow between pages */}
+                      <div
+                        className="hidden w-[10px] shrink-0 sm:block lg:w-[14px]"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(40,28,18,0.95) 35%, rgba(20,14,10,1) 50%, rgba(40,28,18,0.95) 65%, rgba(0,0,0,0.55) 100%)",
+                          boxShadow:
+                            "inset 0 0 20px rgba(0,0,0,0.9), inset 4px 0 8px rgba(0,0,0,0.35), inset -4px 0 8px rgba(0,0,0,0.35)",
+                        }}
                       />
-                    ) : null}
+
+                      {wide ? (
+                        <div
+                          className="min-w-0 flex-1 sm:max-w-[min(50%,24rem)] lg:max-w-[min(50%,26rem)]"
+                          style={{
+                            transform: `rotateY(-${pageTurnY})`,
+                            transformOrigin: "left center",
+                            transformStyle: "preserve-3d",
+                          }}
+                        >
+                          <PageFace
+                            paragraphs={rightPage ?? []}
+                            side="right"
+                            empty={!rightPage || rightPage.length === 0}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Scene panel: below book on mobile, right column on large screens */}
           <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start">
             <div
               className="rounded-lg border border-[#5c4a2a]/50 p-4 lg:sticky lg:top-6"
@@ -323,31 +395,26 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           </aside>
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-            {/* Controls */}
             <div className="mx-auto mt-0 max-w-5xl space-y-4 lg:mt-8">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2 rounded-full border border-[#5c4a2a]/60 bg-[#1f1610]/80 p-1">
                   <button
                     type="button"
-                    onClick={() => setTextMode("exact")}
-                    className={[
-                      "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                      textMode === "exact" ? "bg-[#c9a227] text-[#1a1308]" : "text-[#c4b49a] hover:text-[#f0e6d4]",
-                    ].join(" ")}
+                    aria-current="true"
+                    className="rounded-full bg-[#c9a227] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#1a1308]"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
                     Exact text
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTextMode("enhanced")}
-                    className={[
-                      "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                      textMode === "enhanced" ? "bg-[#c9a227] text-[#1a1308]" : "text-[#c4b49a] hover:text-[#f0e6d4]",
-                    ].join(" ")}
+                    disabled={true}
+                    aria-disabled="true"
+                    title="Enhanced narration text coming next."
+                    className="pointer-events-none cursor-not-allowed rounded-full border border-transparent bg-[#1a120c]/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#5c4f44] opacity-55"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    Enhanced text
+                    Enhanced (coming next)
                   </button>
                 </div>
 
@@ -418,7 +485,6 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

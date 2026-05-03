@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  AISTORYCAST_SCENE_IMAGE_WEBHOOK_URL,
-  parseSceneImageFilenameFromResponse,
-  parseSceneImageUrlFromResponse,
-} from "@/lib/aistorycastSceneImage";
+import { parseSceneImageFilenameFromResponse, parseSceneImageUrlFromResponse, requestSceneImage } from "@/lib/aistorycastSceneImage";
 
 type ChapterHelperPayload = {
   title: string;
@@ -150,21 +146,14 @@ export default function WebhookTestPage() {
     const story_text = extractedImagePrompt || payload.chapterText;
 
     try {
-      const response = await fetch(AISTORYCAST_SCENE_IMAGE_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ story_text }),
-      });
-
-      const data = (await response.json()) as unknown;
-
-      if (!response.ok) {
-        setImageError(`Request failed (${response.status} ${response.statusText})`);
+      const result = await requestSceneImage(story_text);
+      if (result.ok) {
+        setImageResponseJson({ image_url: result.url, filename: result.filename });
+        setImageError(null);
+      } else {
+        setImageError(result.error);
+        setImageResponseJson(null);
       }
-
-      setImageResponseJson(data);
     } catch (err) {
       setImageError(err instanceof Error ? err.message : "Request failed");
     } finally {
