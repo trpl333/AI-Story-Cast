@@ -1,4 +1,9 @@
 import { useState } from "react";
+import {
+  AISTORYCAST_SCENE_IMAGE_WEBHOOK_URL,
+  parseSceneImageFilenameFromResponse,
+  parseSceneImageUrlFromResponse,
+} from "@/lib/aistorycastSceneImage";
 
 type ChapterHelperPayload = {
   title: string;
@@ -9,7 +14,6 @@ type ChapterHelperPayload = {
 };
 
 const WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-chapter-helper";
-const IMAGE_WEBHOOK_URL = "https://n8n.jdpenterprises.ai/webhook/aistorycast-generate-scene";
 
 const defaultPayload: ChapterHelperPayload = {
   title: "Alice",
@@ -94,18 +98,6 @@ function extractDisplayData(responseJson: unknown): {
   };
 }
 
-function getSceneImageUrl(value: unknown): string | null {
-  if (!isObject(value)) return null;
-  const url = value.image_url;
-  return typeof url === "string" && url.length > 0 ? url : null;
-}
-
-function getSceneImageFilename(value: unknown): string | null {
-  if (!isObject(value)) return null;
-  const filename = value.filename;
-  return typeof filename === "string" && filename.length > 0 ? filename : null;
-}
-
 export default function WebhookTestPage() {
   const [payload, setPayload] = useState<ChapterHelperPayload>(defaultPayload);
   const [responseJson, setResponseJson] = useState<unknown>(null);
@@ -158,7 +150,7 @@ export default function WebhookTestPage() {
     const story_text = extractedImagePrompt || payload.chapterText;
 
     try {
-      const response = await fetch(IMAGE_WEBHOOK_URL, {
+      const response = await fetch(AISTORYCAST_SCENE_IMAGE_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -184,8 +176,8 @@ export default function WebhookTestPage() {
     extractDisplayData(responseJson);
   const hasStructuredContent = Boolean(summary || narration || imagePrompt || characters.length > 0);
   const generatedAudioSrc = audioBase64 && audioMimeType ? `data:${audioMimeType};base64,${audioBase64}` : null;
-  const sceneImageUrl = getSceneImageUrl(imageResponseJson);
-  const sceneImageFilename = getSceneImageFilename(imageResponseJson);
+  const sceneImageUrl = parseSceneImageUrlFromResponse(imageResponseJson);
+  const sceneImageFilename = parseSceneImageFilenameFromResponse(imageResponseJson);
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] px-6 py-10">
