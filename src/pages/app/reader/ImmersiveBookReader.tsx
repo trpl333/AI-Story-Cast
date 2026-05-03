@@ -12,10 +12,45 @@ const paperFaceBg = [
   "linear-gradient(162deg, #fdf8ee 0%, #f2e8d4 40%, #e5d6be 100%)",
 ].join(", ");
 
+/** Physical stacked sheet layers (offset divs) on outside fore-edge. */
+function CascadingPaperSheets(props: { side: "left" | "right" }) {
+  const { side } = props;
+  const count = 9;
+  const outward = side === "left";
+  return (
+    <div
+      className={`pointer-events-none absolute inset-y-2 bottom-3 z-0 ${outward ? "left-0" : "right-0"}`}
+      style={{ width: "min(32px, 7%)" }}
+      aria-hidden
+    >
+      {Array.from({ length: count }).map((_, i) => {
+        const step = 1.65;
+        const shift = 3 + i * step;
+        return (
+          <div
+            key={i}
+            className="absolute top-1.5 bottom-2 rounded-[4px]"
+            style={{
+              width: "calc(100% - 4px)",
+              ...(outward
+                ? { left: -shift, boxShadow: "-2px 1px 4px rgba(0,0,0,0.12), inset 1px 0 0 rgba(255,255,255,0.25)" }
+                : { right: -shift, boxShadow: "2px 1px 4px rgba(0,0,0,0.12), inset -1px 0 0 rgba(255,255,255,0.22)" }),
+              background: "linear-gradient(180deg, #fffdf8 0%, #efe4d2 42%, #d8c8a8 100%)",
+              opacity: Math.max(0.12, 0.82 - i * 0.08),
+              zIndex: -i,
+              border: "1px solid rgba(55,42,28,0.06)",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 /** Thin paper-edge lines for fore-edge / tail (Da Vinci–style stack illusion). */
 function PaperEdgeLines(props: { side: "left" | "right"; className?: string }) {
   const { side, className = "" } = props;
-  const lines = 14;
+  const lines = 18;
   const toward = side === "left" ? "left" : "right";
   return (
     <div
@@ -44,36 +79,38 @@ function PaperEdgeLines(props: { side: "left" | "right"; className?: string }) {
   );
 }
 
-/** Cascading page layers on outside edge (box-shadow thickness). */
+/** Extra fore-edge thickness via stacked box-shadows (under sheets). */
 function PageBlockStack(props: { side: "left" | "right" }) {
   const { side } = props;
   const toward = side === "left" ? "left" : "right";
   const shadowLayers =
     side === "left"
       ? [
-          "inset -2px 0 3px rgba(0,0,0,0.2)",
-          "-1px 0 0 rgba(252,246,232,0.9)",
-          "-3px 0 0 rgba(235,220,198,0.85)",
-          "-6px 0 0 rgba(210,190,165,0.65)",
-          "-10px 0 0 rgba(180,158,130,0.45)",
-          "-14px 0 0 rgba(140,118,95,0.32)",
-          "-18px 0 0 rgba(90,72,55,0.22)",
-          "-22px 0 0 rgba(40,32,24,0.14)",
+          "inset -2px 0 4px rgba(0,0,0,0.18)",
+          "-1px 0 0 rgba(252,246,232,0.95)",
+          "-2px 0 0 rgba(240,228,210,0.9)",
+          "-4px 0 0 rgba(225,205,178,0.75)",
+          "-7px 0 0 rgba(200,175,145,0.55)",
+          "-11px 0 0 rgba(165,140,110,0.4)",
+          "-16px 0 0 rgba(120,98,75,0.28)",
+          "-21px 0 0 rgba(70,55,40,0.18)",
+          "-26px 0 0 rgba(30,24,18,0.1)",
         ].join(", ")
       : [
-          "inset 2px 0 3px rgba(0,0,0,0.2)",
-          "1px 0 0 rgba(252,246,232,0.9)",
-          "3px 0 0 rgba(235,220,198,0.85)",
-          "6px 0 0 rgba(210,190,165,0.65)",
-          "10px 0 0 rgba(180,158,130,0.45)",
-          "14px 0 0 rgba(140,118,95,0.32)",
-          "18px 0 0 rgba(90,72,55,0.22)",
-          "22px 0 0 rgba(40,32,24,0.14)",
+          "inset 2px 0 4px rgba(0,0,0,0.18)",
+          "1px 0 0 rgba(252,246,232,0.95)",
+          "2px 0 0 rgba(240,228,210,0.9)",
+          "4px 0 0 rgba(225,205,178,0.75)",
+          "7px 0 0 rgba(200,175,145,0.55)",
+          "11px 0 0 rgba(165,140,110,0.4)",
+          "16px 0 0 rgba(120,98,75,0.28)",
+          "21px 0 0 rgba(70,55,40,0.18)",
+          "26px 0 0 rgba(30,24,18,0.1)",
         ].join(", ");
 
   return (
     <div
-      className={`pointer-events-none absolute inset-y-1 z-0 ${toward === "left" ? "left-0" : "right-0"} w-5 sm:w-6`}
+      className={`pointer-events-none absolute inset-y-1 z-0 ${toward === "left" ? "left-0" : "right-0"} w-6 sm:w-7`}
       style={{ boxShadow: shadowLayers }}
       aria-hidden
     />
@@ -98,9 +135,9 @@ function BottomPageStackShadow() {
 
 /** Tail-edge paper lines along bottom of spread (stacked sheets). */
 function BottomPaperEdgeLines() {
-  const lines = 10;
+  const lines = 12;
   return (
-    <div className="pointer-events-none absolute inset-x-4 bottom-1 z-[2] h-[9px] overflow-hidden sm:inset-x-6" aria-hidden>
+    <div className="pointer-events-none absolute inset-x-3 bottom-0 z-[2] h-[11px] overflow-hidden sm:inset-x-5" aria-hidden>
       {Array.from({ length: lines }).map((_, i) => {
         const offset = i * 0.85;
         return (
@@ -132,7 +169,8 @@ function useReaderLayout() {
     return () => mq.removeEventListener("change", fn);
   }, []);
 
-  const maxCharsPerPage = wide ? 1050 : 560;
+  /* Slightly fewer chars on wide layout so text fits landscape faces without internal scroll. */
+  const maxCharsPerPage = wide ? 860 : 520;
   return { wide, maxCharsPerPage };
 }
 
@@ -140,25 +178,27 @@ function useReaderLayout() {
 function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"; empty?: boolean }) {
   const { paragraphs, side, empty } = props;
   const towardGutter = side === "left" ? "right" : "left";
-  const roundMain = side === "left" ? "rounded-l-[12px] rounded-r-[4px]" : "rounded-r-[12px] rounded-l-[4px]";
+  const roundMain = side === "left" ? "rounded-l-[14px] rounded-r-[5px]" : "rounded-r-[14px] rounded-l-[5px]";
 
   const foreEdgeShadow =
     side === "left"
-      ? "2px 0 0 rgba(250,244,232,0.55), 5px 0 0 rgba(210,190,160,0.35), 9px 0 0 rgba(175,150,120,0.22), 14px 0 0 rgba(0,0,0,0.07)"
-      : "-2px 0 0 rgba(250,244,232,0.55), -5px 0 0 rgba(210,190,160,0.35), -9px 0 0 rgba(175,150,120,0.22), -14px 0 0 rgba(0,0,0,0.07)";
+      ? "2px 0 0 rgba(250,244,232,0.55), 5px 0 0 rgba(210,190,160,0.38), 10px 0 0 rgba(175,150,120,0.26), 16px 0 0 rgba(0,0,0,0.08)"
+      : "-2px 0 0 rgba(250,244,232,0.55), -5px 0 0 rgba(210,190,160,0.38), -10px 0 0 rgba(175,150,120,0.26), -16px 0 0 rgba(0,0,0,0.08)";
 
+  /* Stronger roll into spine: darker sweep near gutter + lift on outer edge */
   const curveShadow =
     side === "left"
-      ? "inset 0 -10px 14px rgba(55,42,28,0.06), inset 6px 0 18px rgba(55,42,28,0.05)"
-      : "inset 0 -10px 14px rgba(55,42,28,0.06), inset -6px 0 18px rgba(55,42,28,0.05)";
+      ? "inset 0 -12px 16px rgba(55,42,28,0.07), inset 14px 0 28px rgba(55,42,28,0.07), inset -2px 0 8px rgba(255,255,255,0.12)"
+      : "inset 0 -12px 16px rgba(55,42,28,0.07), inset -14px 0 28px rgba(55,42,28,0.07), inset 2px 0 8px rgba(255,255,255,0.12)";
 
   const faceShadow =
     side === "left"
-      ? `${curveShadow}, inset 0 -5px 12px rgba(255,255,255,0.35), 0 12px 22px rgba(0,0,0,0.2), ${foreEdgeShadow}`
-      : `${curveShadow}, inset 0 -5px 12px rgba(255,255,255,0.35), 0 12px 22px rgba(0,0,0,0.2), ${foreEdgeShadow}`;
+      ? `${curveShadow}, inset 0 -4px 10px rgba(255,255,255,0.32), 0 10px 20px rgba(0,0,0,0.18), ${foreEdgeShadow}`
+      : `${curveShadow}, inset 0 -4px 10px rgba(255,255,255,0.32), 0 10px 20px rgba(0,0,0,0.18), ${foreEdgeShadow}`;
 
   return (
-    <div className={`relative min-h-0 min-w-0 flex-1 ${roundMain}`}>
+    <div className={`relative min-h-0 min-w-0 flex-1 overflow-visible ${roundMain}`}>
+      <CascadingPaperSheets side={side} />
       <PageBlockStack side={side} />
       <PaperEdgeLines side={side} />
 
@@ -177,7 +217,7 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
 
       <div
         className={[
-          "relative z-[3] flex min-h-[min(30vh,240px)] flex-1 flex-col overflow-hidden sm:min-h-[min(34vh,280px)] lg:min-h-[min(36vh,300px)]",
+          "relative z-[3] flex min-h-[min(22vh,180px)] flex-1 flex-col overflow-hidden sm:min-h-[min(24vh,200px)] lg:min-h-[min(25vh,215px)] xl:min-h-[min(26vh,228px)]",
           roundMain,
           empty ? "items-stretch justify-stretch" : "",
         ].join(" ")}
@@ -186,13 +226,13 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
           backgroundColor: "#f0e6d6",
           boxShadow: faceShadow,
           border: "1px solid rgba(62,48,28,0.09)",
-          transform: side === "left" ? "rotateX(1.2deg)" : "rotateX(1.2deg)",
+          transform: side === "left" ? "rotateX(0.9deg)" : "rotateX(0.9deg)",
           transformOrigin: side === "left" ? "right center" : "left center",
         }}
       >
         {!empty && (
           <div
-            className="pointer-events-none absolute inset-[9px] rounded-[4px] opacity-40 sm:inset-[11px]"
+            className="pointer-events-none absolute inset-[8px] rounded-[5px] opacity-40 sm:inset-[12px] lg:inset-[14px]"
             style={{
               border: "1px solid rgba(90,72,52,0.07)",
               boxShadow: "inset 0 0 36px rgba(90,72,52,0.045)",
@@ -215,17 +255,17 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
         {empty ? (
           <div className="h-full min-h-[inherit] w-full bg-transparent" aria-hidden />
         ) : (
-          <div className="relative z-[2] flex flex-1 flex-col gap-3 overflow-hidden px-4 py-5 sm:gap-4 sm:px-7 sm:py-6">
+          <div className="relative z-[2] flex flex-1 flex-col gap-2.5 overflow-hidden px-4 py-4 sm:gap-3 sm:px-8 sm:py-5 lg:px-10 lg:py-5">
             {paragraphs.map((p, idx) => (
               <div key={idx}>
                 <p
-                  className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[#6e5c42]"
+                  className="text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#6e5c42] sm:text-[0.6rem]"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   {p.label}
                 </p>
                 <p
-                  className="mt-1 text-[0.92rem] leading-[1.65] text-[#241c14] sm:text-[1rem]"
+                  className="mt-0.5 text-[0.95rem] leading-[1.62] text-[#241c14] sm:text-[1.04rem] lg:text-[1.07rem]"
                   style={{
                     fontFamily: "'Lora', 'Georgia', serif",
                     textShadow: "0 0.5px 0 rgba(255,255,255,0.35)",
@@ -352,7 +392,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
       ? `Spread ${Math.floor(clampedLeft / 2) + 1} · pages ${clampedLeft + 1}–${clampedLeft + 2}`
       : `Page ${clampedLeft + 1} of ${pages.length}`;
 
-  const pageTurnY = wide ? "5.5deg" : "3deg";
+  const pageTurnY = wide ? "7.5deg" : "3.5deg";
 
   const brassPanel =
     "rounded-lg border-2 border-[#7a5c28]/70 bg-gradient-to-b from-[#2c2418] via-[#1a1510] to-[#120e0a] shadow-[inset_0_1px_0_rgba(255,214,160,0.12),inset_0_-2px_6px_rgba(0,0,0,0.45),0_10px_28px_rgba(0,0,0,0.55)]";
@@ -374,7 +414,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
         }}
       />
 
-      <div className="relative z-[1] mx-auto max-w-[min(100%,88rem)] px-3 pb-10 pt-5 sm:px-5 lg:px-8">
+      <div className="relative z-[1] mx-auto max-w-[min(100%,96rem)] px-3 pb-10 pt-5 sm:px-5 lg:px-8">
         <nav
           className="mb-5 flex flex-wrap items-center gap-2 text-xs text-[#b9a88a]"
           style={{ fontFamily: "'Inter', sans-serif" }}
@@ -398,9 +438,9 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           <span className="font-medium text-[#f5edd8]">{chapterHeading}</span>
         </nav>
 
-        <div className="flex flex-col items-stretch gap-5 lg:flex-row lg:items-start lg:justify-center lg:gap-6 xl:gap-8">
+        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5 xl:gap-6">
           {/* Main column: book dominates width */}
-          <div className="min-w-0 w-full lg:flex-1 lg:max-w-[min(100%,72rem)]">
+          <div className="min-w-0 w-full lg:flex-1 lg:max-w-[min(100%,84rem)]">
             <header className="mb-5 text-center lg:mb-6">
               <p
                 className="text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-[#9a8470]"
@@ -424,35 +464,35 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               ) : null}
             </header>
 
-            <div className="relative mx-auto w-full max-w-[min(96vw,68rem)] px-0 sm:px-1">
+            <div className="relative mx-auto w-full max-w-[min(98vw,80rem)] px-0 sm:px-1">
               <div
-                className="absolute -bottom-2 left-1/2 z-0 h-32 w-[min(98%,680px)] -translate-x-1/2 rounded-[50%] blur-2xl"
+                className="absolute -bottom-2 left-1/2 z-0 h-36 w-[min(100%,820px)] -translate-x-1/2 rounded-[50%] blur-2xl"
                 style={{
                   background: "radial-gradient(ellipse at center, rgba(195,150,42,0.28) 0%, rgba(100,70,32,0.1) 48%, transparent 72%)",
                 }}
               />
               <div
-                className="absolute bottom-0 left-1/2 z-0 h-3.5 w-[min(94%,600px)] -translate-x-1/2 rounded-sm"
+                className="absolute bottom-0 left-1/2 z-0 h-3.5 w-[min(96%,720px)] -translate-x-1/2 rounded-sm"
                 style={{
                   background: "linear-gradient(to bottom, #5a4330, #241a12)",
                   boxShadow: "0 3px 0 rgba(0,0,0,0.4)",
                 }}
               />
               <div
-                className="absolute bottom-0 left-1/2 z-0 h-12 w-[min(90%,560px)] -translate-x-1/2 rounded-b-md"
+                className="absolute bottom-0 left-1/2 z-0 h-12 w-[min(92%,680px)] -translate-x-1/2 rounded-b-md"
                 style={{
                   background: "linear-gradient(to bottom, #3a2818 0%, #16100c 55%, #080605 100%)",
                   boxShadow: "0 18px 40px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.05)",
                 }}
               />
 
-              <div className="relative z-[1] pb-12 pt-2" style={{ perspective: "2400px", perspectiveOrigin: "50% 28%" }}>
+              <div className="relative z-[1] pb-12 pt-2" style={{ perspective: "1900px", perspectiveOrigin: "50% 24%" }}>
                 {/* Outer leather cover — wider than page block */}
                 <div
-                  className="absolute left-1/2 top-4 z-0 w-[calc(100%+10px)] max-w-[69rem] -translate-x-1/2 rounded-b-[32px] rounded-t-[20px] sm:top-5"
+                  className="absolute left-1/2 top-4 z-0 w-[calc(100%+18px)] max-w-[88rem] -translate-x-1/2 rounded-b-[36px] rounded-t-[22px] sm:top-5"
                   style={{
                     height: "calc(100% - 0.2rem)",
-                    minHeight: "min(42vh, 360px)",
+                    minHeight: "min(34vh, 320px)",
                     background:
                       "linear-gradient(176deg, #453024 0%, #261610 22%, #120c09 50%, #2a1a12 78%, #4a3424 100%)",
                     boxShadow:
@@ -476,12 +516,12 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                   }}
                 />
                 <div
-                  className="pointer-events-none absolute left-1/2 top-3 z-[2] h-2.5 w-[90%] max-w-[58rem] -translate-x-1/2 rounded-full opacity-45 blur-sm"
+                  className="pointer-events-none absolute left-1/2 top-3 z-[2] h-2.5 w-[92%] max-w-[76rem] -translate-x-1/2 rounded-full opacity-45 blur-sm"
                   style={{ background: "linear-gradient(90deg, transparent, rgba(255,210,150,0.22), transparent)" }}
                 />
 
                 <div
-                  className="relative z-[3] mx-auto w-full rounded-t-[14px] rounded-b-[22px] p-[9px] sm:p-2.5"
+                  className="relative z-[3] mx-auto w-full overflow-visible rounded-t-[14px] rounded-b-[22px] p-[9px] sm:p-2.5"
                   style={{
                     background: "linear-gradient(165deg, rgba(24,16,11,0.98) 0%, rgba(10,8,6,0.99) 100%)",
                     boxShadow:
@@ -495,22 +535,22 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                   />
 
                   <div
-                    className="relative rounded-[10px] p-1 sm:p-1.5"
+                    className="relative overflow-visible rounded-[10px] p-1 sm:p-1.5"
                     style={{
                       background:
                         "linear-gradient(168deg, #322218 0%, #1a100c 46%, #241610 100%), repeating-linear-gradient(-52deg, transparent, transparent 4px, rgba(0,0,0,0.055) 4px, rgba(0,0,0,0.055) 5px)",
                       boxShadow: "inset 0 3px 14px rgba(0,0,0,0.48), inset 0 -2px 0 rgba(255,255,255,0.025)",
                     }}
                   >
-                    <div className="relative" style={{ transformStyle: "preserve-3d" }}>
+                    <div className="relative overflow-visible" style={{ transformStyle: "preserve-3d" }}>
                       <BottomPageStackShadow />
 
-                      <div className="relative pb-2" style={{ transformStyle: "preserve-3d" }}>
+                      <div className="relative overflow-visible pb-2" style={{ transformStyle: "preserve-3d" }}>
                         <BottomPaperEdgeLines />
-                        <div className="relative flex flex-row items-stretch gap-0" style={{ transformStyle: "preserve-3d" }}>
+                        <div className="relative flex flex-row items-stretch gap-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
                         {/* Left page column: stacked block + top page */}
                         <div
-                          className="relative min-h-0 min-w-0 flex-1 basis-[50%]"
+                          className="relative min-h-0 min-w-0 flex-1 basis-[50%] overflow-visible"
                           style={{
                             transform: `rotateY(${pageTurnY})`,
                             transformOrigin: "right center",
@@ -520,24 +560,43 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                           <PageFace paragraphs={leftPage} side="left" />
                         </div>
 
-                        <div
-                          className="relative z-[4] hidden w-[14px] shrink-0 sm:block lg:w-[18px]"
-                          style={{
-                            background:
-                              "linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(32,22,14,0.98) 26%, #0a0705 50%, rgba(32,22,14,0.98) 74%, rgba(0,0,0,0.72) 100%)",
-                            boxShadow:
-                              "inset 0 0 26px rgba(0,0,0,1), inset 6px 0 12px rgba(0,0,0,0.42), inset -6px 0 12px rgba(0,0,0,0.42)",
-                          }}
-                        >
+                        {/* Curved binding valley (not a flat black bar) */}
+                        <div className="relative z-[4] hidden w-[22px] shrink-0 overflow-visible sm:block lg:w-[30px]">
                           <div
-                            className="pointer-events-none absolute inset-y-5 left-1/2 w-[2px] -translate-x-1/2 bg-black/50"
-                            style={{ boxShadow: "0 0 5px rgba(255,224,170,0.1)" }}
+                            className="pointer-events-none absolute inset-y-1 -left-1 -right-1 rounded-[999px]"
+                            style={{
+                              background:
+                                "radial-gradient(ellipse 48% 100% at 50% 50%, rgba(8,5,4,0.92) 0%, rgba(28,20,14,0.55) 42%, rgba(72,58,42,0.22) 72%, rgba(120,100,78,0.08) 100%)",
+                              boxShadow:
+                                "inset 0 0 12px rgba(0,0,0,0.65), inset 5px 0 10px rgba(0,0,0,0.25), inset -5px 0 10px rgba(0,0,0,0.25)",
+                            }}
+                          />
+                          <div
+                            className="pointer-events-none absolute inset-y-5 left-0 w-[46%] rounded-l-full opacity-90"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, rgba(255,252,242,0.55) 0%, rgba(255,248,230,0.18) 55%, transparent 100%)",
+                            }}
+                          />
+                          <div
+                            className="pointer-events-none absolute inset-y-5 right-0 w-[46%] rounded-r-full opacity-90"
+                            style={{
+                              background:
+                                "linear-gradient(270deg, rgba(255,252,242,0.55) 0%, rgba(255,248,230,0.18) 55%, transparent 100%)",
+                            }}
+                          />
+                          <div
+                            className="pointer-events-none absolute inset-y-7 left-1/2 w-[2px] -translate-x-1/2 rounded-full opacity-80"
+                            style={{
+                              background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 22%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.55) 78%, transparent 100%)",
+                              boxShadow: "0 0 10px rgba(0,0,0,0.55), 0 0 4px rgba(255,230,190,0.12)",
+                            }}
                           />
                         </div>
 
                         {wide ? (
                           <div
-                            className="relative min-h-0 min-w-0 flex-1 basis-[50%]"
+                            className="relative min-h-0 min-w-0 flex-1 basis-[50%] overflow-visible"
                             style={{
                               transform: `rotateY(-${pageTurnY})`,
                               transformOrigin: "left center",
@@ -556,7 +615,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
             </div>
 
             {/* Controls: clustered under book (brass / leather desk) */}
-            <div className={`relative z-[2] mx-auto mt-3 w-full max-w-[min(96vw,68rem)] px-0 sm:px-1 ${brassPanel} p-3 sm:p-4`}>
+            <div className={`relative z-[2] mx-auto mt-3 w-full max-w-[min(98vw,80rem)] px-0 sm:px-1 ${brassPanel} p-3 sm:p-4`}>
               <div className="pointer-events-none absolute left-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
               <div className="pointer-events-none absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
 
@@ -623,19 +682,22 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               </div>
             </div>
 
-            <div className="mx-auto mt-4 w-full max-w-[min(96vw,68rem)] border-t border-[#4a3c28]/45 pt-4">
+            <div className="mx-auto mt-4 w-full max-w-[min(98vw,80rem)] border-t border-[#4a3c28]/45 pt-4">
               <ReaderChapterNav bookId={bookId} prevSlug={prevChapterSlug} nextSlug={nextChapterSlug} layout="footer" variant="library" />
             </div>
           </div>
 
-          {/* AIStoryCast companion: scene, analysis, secrets (narration tools later) */}
+          {/* AIStoryCast companion — compact floating card, not a full-height slab */}
           <aside
-            className="mx-auto w-full max-w-md shrink-0 lg:mx-0 lg:mt-0 lg:w-[min(100%,300px)] lg:max-w-[min(300px,28vw)] lg:pt-2"
+            className="mx-auto w-full max-w-sm shrink-0 lg:mx-0 lg:mt-1 lg:w-[248px] lg:min-w-[248px] lg:max-w-[248px] lg:pt-0 xl:w-[260px] xl:min-w-[260px] xl:max-w-[260px]"
             aria-label="AIStoryCast companion"
           >
             <div
-              className={`${brassPanel} overflow-hidden p-3 shadow-2xl sm:p-3.5 lg:sticky lg:top-5`}
-              style={{ boxShadow: "inset 0 1px 0 rgba(255,214,160,0.1), 0 16px 40px rgba(0,0,0,0.5)" }}
+              className={`${brassPanel} overflow-hidden rounded-2xl p-3 sm:p-3.5 lg:sticky lg:top-6`}
+              style={{
+                boxShadow:
+                  "inset 0 1px 0 rgba(255,214,160,0.1), 0 10px 28px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.35)",
+              }}
             >
               <p
                 className="text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-[#a89878]"
@@ -704,7 +766,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                           <img
                             src={sceneUrl}
                             alt="Illustration for this spread"
-                            className="w-full rounded-sm object-cover shadow-md"
+                            className="max-h-[min(38vh,220px)] w-full rounded-sm object-cover object-top shadow-md"
                           />
                         </div>
                         {sceneFilename ? (
