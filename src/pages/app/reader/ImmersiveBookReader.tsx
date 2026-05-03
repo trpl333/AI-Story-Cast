@@ -530,9 +530,9 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           <span className="font-medium text-[#f5edd8]">{chapterHeading}</span>
         </nav>
 
-        <div className="mx-auto flex w-full max-w-[min(100vw-0.5rem,92rem)] flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5">
-          {/* BookStage hero: ~70–80% width beside fixed companion */}
-          <div className="book-hero-column flex w-full min-w-0 flex-1 flex-col items-stretch lg:max-w-[min(100%,calc(100%-15.5rem))]">
+        <div className="mx-auto grid w-full max-w-[min(100vw-0.5rem,92rem)] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-8">
+          {/* Main column: book + controls stay left; never overlap companion grid column */}
+          <div className="book-hero-column relative z-0 flex min-w-0 flex-col items-stretch">
             <header className="mb-5 text-center lg:mb-6">
               <p
                 className="text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-[#9a8470]"
@@ -557,11 +557,11 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
             </header>
 
             <section
-              className="book-stage relative mx-auto flex w-full max-w-[min(98vw,78rem)] flex-col items-center px-0 sm:px-1"
+              className="book-stage relative z-0 mx-auto flex w-full max-w-full min-w-0 flex-col items-center overflow-hidden px-0 sm:px-1"
               aria-label="Open book on desk"
             >
               <div
-                className="desk-surface relative w-full rounded-[1.75rem] border border-black/60 px-3 pb-10 pt-7 sm:rounded-[2rem] sm:px-6 sm:pb-12 sm:pt-9"
+                className="desk-surface relative z-0 w-full max-w-full min-w-0 overflow-hidden rounded-[1.75rem] border border-black/60 px-3 pb-10 pt-7 sm:rounded-[2rem] sm:px-6 sm:pb-12 sm:pt-9"
                 style={{
                   background: [
                     "linear-gradient(192deg, rgba(52,38,28,0.96) 0%, rgba(26,18,12,0.99) 40%, rgba(12,9,7,1) 100%)",
@@ -573,29 +573,29 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                 }}
               >
                 <div
-                  className="pedestal-shadow pointer-events-none absolute bottom-4 left-1/2 z-0 h-44 w-[min(110%,920px)] -translate-x-1/2 rounded-[50%] blur-2xl"
+                  className="pedestal-shadow pointer-events-none absolute bottom-4 left-1/2 z-0 h-44 w-[min(100%,42rem)] max-w-full -translate-x-1/2 rounded-[50%] blur-2xl"
                   style={{
                     background: "radial-gradient(ellipse at center, rgba(205,160,48,0.26) 0%, rgba(95,65,32,0.1) 48%, transparent 74%)",
                   }}
                 />
                 <div
-                  className="pedestal-shadow pointer-events-none absolute bottom-2 left-1/2 z-0 h-4 w-[min(98%,780px)] -translate-x-1/2 rounded-sm"
+                  className="pedestal-shadow pointer-events-none absolute bottom-2 left-1/2 z-0 h-4 w-[min(100%,36rem)] max-w-[92%] -translate-x-1/2 rounded-sm"
                   style={{
                     background: "linear-gradient(to bottom, #5c4634, #241a12)",
                     boxShadow: "0 4px 0 rgba(0,0,0,0.45)",
                   }}
                 />
                 <div
-                  className="pedestal-shadow pointer-events-none absolute bottom-0 left-1/2 z-0 h-[3.25rem] w-[min(94%,720px)] -translate-x-1/2 rounded-b-lg"
+                  className="pedestal-shadow pointer-events-none absolute bottom-0 left-1/2 z-0 h-[3.25rem] w-[min(100%,34rem)] max-w-[90%] -translate-x-1/2 rounded-b-lg"
                   style={{
                     background: "linear-gradient(to bottom, #3a2a1e 0%, #140e0b 58%, #060403 100%)",
                     boxShadow: "0 24px 48px rgba(0,0,0,0.78), inset 0 1px 0 rgba(255,255,255,0.05)",
                   }}
                 />
 
-                <div className="relative z-[1] w-full pt-1" style={{ perspective: "1650px", perspectiveOrigin: "50% 12%" }}>
+                <div className="relative z-[1] w-full max-w-full min-w-0 pt-1" style={{ perspective: "1650px", perspectiveOrigin: "50% 12%" }}>
                   <div
-                    className="relative mx-auto w-full max-w-[min(100%,72rem)]"
+                    className="relative mx-auto w-full max-w-full min-w-0"
                     style={{
                       transform: "rotateX(4.2deg)",
                       transformOrigin: "50% 94%",
@@ -603,15 +603,16 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                     }}
                   >
                     <div
-                      className="leather-cover pointer-events-none absolute left-1/2 top-2 z-0 w-[calc(100%+22px)] max-w-[80rem] -translate-x-1/2 rounded-b-[40px] rounded-t-[24px] sm:top-3"
+                      className="leather-cover pointer-events-none absolute inset-x-1 top-2 z-0 rounded-b-[40px] rounded-t-[24px] sm:inset-x-2 sm:top-3"
                       style={{
                         height: "calc(100% - 0.12rem)",
                         minHeight: "min(28vh, 270px)",
+                        width: "auto",
                         background:
                           "linear-gradient(176deg, #4d3828 0%, #281810 20%, #0e0906 48%, #241610 74%, #52402c 100%)",
                         boxShadow:
                           "0 0 0 1px rgba(0,0,0,0.78), inset 0 3px 5px rgba(255,255,255,0.04), inset 0 -28px 42px rgba(0,0,0,0.7), 0 36px 72px rgba(0,0,0,0.7)",
-                        transform: "translateZ(-30px) scale(1.048)",
+                        transform: "translateZ(-30px) scale(1.02)",
                         transformStyle: "preserve-3d",
                       }}
                     />
@@ -630,12 +631,12 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       }}
                     />
                     <div
-                      className="pointer-events-none absolute left-1/2 top-2 z-[2] h-3 w-[93%] max-w-[70rem] -translate-x-1/2 rounded-full opacity-50 blur-sm"
+                      className="pointer-events-none absolute left-1/2 top-2 z-[2] h-3 w-[92%] max-w-full -translate-x-1/2 rounded-full opacity-50 blur-sm"
                       style={{ background: "linear-gradient(90deg, transparent, rgba(255,210,150,0.24), transparent)" }}
                     />
 
                     <div
-                      className="relative z-[3] mx-auto w-full overflow-visible rounded-t-[16px] rounded-b-[26px] p-[10px] sm:p-3"
+                      className="relative z-[3] mx-auto w-full max-w-full min-w-0 overflow-visible rounded-t-[16px] rounded-b-[26px] p-[10px] sm:p-3"
                       style={{
                         background: "linear-gradient(165deg, rgba(22,15,10,0.99) 0%, rgba(8,6,5,1) 100%)",
                         boxShadow:
@@ -649,17 +650,17 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       />
 
                       <div
-                        className="relative overflow-visible rounded-[12px] p-1 sm:p-1.5"
+                        className="relative max-w-full min-w-0 overflow-visible rounded-[12px] p-1 sm:p-1.5"
                         style={{
                           background:
                             "linear-gradient(168deg, #2e2016 0%, #16100c 46%, #20140e 100%), repeating-linear-gradient(-52deg, transparent, transparent 4px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.06) 5px)",
                           boxShadow: "inset 0 3px 16px rgba(0,0,0,0.52), inset 0 -2px 0 rgba(255,255,255,0.02)",
                         }}
                       >
-                        <div className="relative overflow-visible" style={{ transformStyle: "preserve-3d" }}>
+                        <div className="relative max-w-full min-w-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
                           <BottomPageStackShadow />
-                          <div className="relative overflow-visible pb-2" style={{ transformStyle: "preserve-3d" }}>
-                            <div className="relative flex flex-row items-stretch gap-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
+                          <div className="relative max-w-full min-w-0 overflow-visible pb-2" style={{ transformStyle: "preserve-3d" }}>
+                            <div className="relative flex max-w-full min-w-0 flex-row items-stretch gap-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
                               <PageBlockColumn
                                 side="left"
                                 transform={`rotateY(${pageTurnY})`}
@@ -687,7 +688,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
             </section>
 
             {/* ControlDeck */}
-            <div className={`control-deck relative z-[2] mx-auto mt-4 w-full max-w-[min(98vw,78rem)] px-0 sm:px-1 ${brassPanel} p-3 sm:p-3.5`}>
+            <div className={`control-deck relative z-[2] mx-auto mt-4 w-full max-w-full min-w-0 px-0 sm:px-1 ${brassPanel} p-3 sm:p-3.5`}>
               <div className="pointer-events-none absolute left-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
               <div className="pointer-events-none absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
 
@@ -754,17 +755,17 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               </div>
             </div>
 
-            <div className="reader-chapter-nav mx-auto mt-4 w-full max-w-[min(98vw,78rem)] border-t border-[#4a3c28]/45 pt-4">
+            <div className="reader-chapter-nav mx-auto mt-4 w-full max-w-full min-w-0 border-t border-[#4a3c28]/45 pt-4">
               <ReaderChapterNav bookId={bookId} prevSlug={prevChapterSlug} nextSlug={nextChapterSlug} layout="footer" variant="library" />
             </div>
           </div>
 
           <aside
-            className="companion-panel mx-auto w-full max-w-xs shrink-0 opacity-95 lg:mx-0 lg:mt-2 lg:w-[216px] lg:min-w-[216px] lg:max-w-[216px] lg:pt-0 lg:opacity-90"
+            className="companion-panel relative z-20 mx-auto w-full max-w-xs min-w-0 shrink-0 opacity-95 lg:mx-0 lg:mt-0 lg:w-full lg:max-w-none lg:min-w-0 lg:pt-1 lg:opacity-100"
             aria-label="AIStoryCast companion"
           >
             <div
-              className="overflow-hidden rounded-xl border border-[#2a2218]/90 bg-gradient-to-b from-[#1a1510]/95 to-[#0d0a08]/98 p-2.5 shadow-md sm:rounded-2xl sm:p-3 lg:sticky lg:top-6"
+              className="relative z-10 overflow-hidden rounded-xl border border-[#2a2218]/90 bg-gradient-to-b from-[#1a1510]/95 to-[#0d0a08]/98 p-2.5 shadow-md sm:rounded-2xl sm:p-3 lg:sticky lg:top-6"
               style={{
                 boxShadow:
                   "inset 0 1px 0 rgba(255,214,160,0.06), 0 6px 18px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4)",
