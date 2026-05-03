@@ -530,7 +530,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           <span className="font-medium text-[#f5edd8]">{chapterHeading}</span>
         </nav>
 
-        <div className="mx-auto grid w-full max-w-[min(100vw-0.5rem,92rem)] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-8">
+        <div className="mx-auto grid w-full max-w-[min(100vw-0.5rem,96rem)] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-10">
           {/* Main column: book + controls stay left; never overlap companion grid column */}
           <div className="book-hero-column relative z-0 flex min-w-0 flex-col items-stretch">
             <header className="mb-5 text-center lg:mb-6">
@@ -761,18 +761,18 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           </div>
 
           <aside
-            className="companion-panel relative z-20 mx-auto w-full max-w-xs min-w-0 shrink-0 opacity-95 lg:mx-0 lg:mt-0 lg:w-full lg:max-w-none lg:min-w-0 lg:pt-1 lg:opacity-100"
+            className="companion-panel relative z-20 mx-auto w-full min-w-0 max-w-full shrink-0 opacity-95 lg:mx-0 lg:mt-0 lg:w-full lg:max-w-none lg:pt-1 lg:opacity-100"
             aria-label="AIStoryCast companion"
           >
             <div
-              className="relative z-10 overflow-hidden rounded-xl border border-[#2a2218]/90 bg-gradient-to-b from-[#1a1510]/95 to-[#0d0a08]/98 p-2.5 shadow-md sm:rounded-2xl sm:p-3 lg:sticky lg:top-6"
+              className="relative z-10 flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-[#2a2218]/90 bg-gradient-to-b from-[#1a1510]/95 to-[#0d0a08]/98 p-3 shadow-md sm:rounded-2xl sm:p-4 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto lg:p-5"
               style={{
                 boxShadow:
-                  "inset 0 1px 0 rgba(255,214,160,0.06), 0 6px 18px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4)",
+                  "inset 0 1px 0 rgba(255,214,160,0.07), 0 8px 24px rgba(0,0,0,0.38), 0 1px 3px rgba(0,0,0,0.42)",
               }}
             >
               <p
-                className="text-[0.52rem] font-semibold uppercase tracking-[0.2em] text-[#7a6a58]"
+                className="text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#8a7a68] sm:text-[0.62rem]"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 Companion
@@ -780,7 +780,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               <div
                 role="tablist"
                 aria-label="Companion sections"
-                className="mt-2.5 flex gap-0.5 rounded-md border border-[#4a3820]/70 bg-[#0f0c09]/90 p-0.5 shadow-inner"
+                className="mt-3 flex gap-1 rounded-md border border-[#4a3820]/70 bg-[#0f0c09]/90 p-1 shadow-inner"
               >
                 {(
                   [
@@ -801,7 +801,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       tabIndex={0}
                       onClick={() => setCompanionTab(id)}
                       className={[
-                        "min-w-0 flex-1 rounded px-1.5 py-1.5 text-[0.62rem] font-semibold uppercase tracking-wide transition-colors sm:text-[0.65rem]",
+                        "min-w-0 flex-1 rounded-md px-2 py-2 text-[0.68rem] font-semibold uppercase tracking-wide transition-colors sm:px-2.5 sm:text-xs",
                         selected
                           ? "bg-[#b8921f] text-[#1a1308] shadow-sm"
                           : "bg-transparent text-[#9a8a78] hover:bg-[#1f1812]/90 hover:text-[#d4c4a8]",
@@ -814,36 +814,36 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                 })}
               </div>
 
-              <div className="mt-3 min-h-0">
+              <div className="mt-4 flex min-h-0 flex-1 flex-col">
                 {companionTab === "scene" ? (
                   <div
                     role="tabpanel"
                     id="companion-panel-scene"
                     aria-labelledby="companion-tab-scene"
-                    className="flex flex-col gap-3"
+                    className="flex min-h-0 flex-1 flex-col gap-4"
                   >
                     {sceneLoading ? (
-                      <p className="text-[0.78rem] leading-relaxed text-[#c4b4a0]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <p className="text-sm leading-relaxed text-[#c4b4a0]" style={{ fontFamily: "'Inter', sans-serif" }}>
                         Generating illustration…
                       </p>
                     ) : null}
                     {sceneError ? (
-                      <p className="text-[0.78rem] leading-relaxed text-amber-200/95" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <p className="text-sm leading-relaxed text-amber-200/95" style={{ fontFamily: "'Inter', sans-serif" }}>
                         {sceneError}
                       </p>
                     ) : null}
                     {sceneUrl ? (
                       <>
-                        <div className="overflow-hidden rounded-md border border-[#6b5428]/65 bg-[#0c0907] p-1 shadow-inner">
+                        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-lg border-2 border-[#6b5428]/70 bg-[#070504] p-1.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.6),0_4px_14px_rgba(0,0,0,0.45)] sm:p-2">
                           <img
                             src={sceneUrl}
                             alt="Illustration for this spread"
-                            className="max-h-[min(38vh,220px)] w-full rounded-sm object-cover object-top shadow-md"
+                            className="mx-auto h-auto w-full max-h-[min(42vh,360px)] rounded-sm object-contain shadow-lg sm:max-h-[min(48vh,400px)] lg:max-h-[min(52vh,440px)]"
                           />
                         </div>
                         {sceneFilename ? (
                           <p
-                            className="truncate text-[0.65rem] text-[#8a7a66]"
+                            className="truncate text-xs text-[#8a7a66]"
                             style={{ fontFamily: "'Inter', sans-serif" }}
                             title={sceneFilename}
                           >
@@ -852,7 +852,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                         ) : null}
                       </>
                     ) : !sceneLoading && !sceneError ? (
-                      <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                      <p className="text-sm leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
                         Generate an illustration from the current open pages.
                       </p>
                     ) : null}
@@ -860,7 +860,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       type="button"
                       onClick={onShowScene}
                       disabled={sceneLoading || spreadPlainText.trim().length === 0}
-                      className="w-full rounded-md border border-[#9a7418]/85 bg-gradient-to-b from-[#6b4e1c] to-[#342210] px-3 py-2.5 text-sm font-semibold text-[#fdf6e9] shadow-md transition-colors hover:from-[#7a5a22] hover:to-[#403018] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="mt-auto w-full rounded-md border border-[#9a7418]/85 bg-gradient-to-b from-[#6b4e1c] to-[#342210] px-4 py-3 text-sm font-semibold text-[#fdf6e9] shadow-md transition-colors hover:from-[#7a5a22] hover:to-[#403018] disabled:cursor-not-allowed disabled:opacity-40"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                     >
                       {sceneLoading ? "Generating…" : "Show this scene"}
@@ -873,15 +873,15 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                     role="tabpanel"
                     id="companion-panel-analysis"
                     aria-labelledby="companion-tab-analysis"
-                    className="flex flex-col gap-3"
+                    className="flex min-h-0 flex-1 flex-col gap-4"
                   >
-                    <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                    <p className="text-sm leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
                       Analysis coming next. AIStoryCast will explain this page, summarize the action, and highlight important context.
                     </p>
                     <button
                       type="button"
                       disabled
-                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-3 py-2.5 text-sm font-medium text-[#6a5c4e]"
+                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-4 py-3 text-sm font-medium text-[#6a5c4e]"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                       title="Coming next"
                     >
@@ -895,15 +895,15 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                     role="tabpanel"
                     id="companion-panel-secrets"
                     aria-labelledby="companion-tab-secrets"
-                    className="flex flex-col gap-3"
+                    className="flex min-h-0 flex-1 flex-col gap-4"
                   >
-                    <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                    <p className="text-sm leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
                       Secrets coming next. This will reveal symbolism, foreshadowing, literary references, and hidden details in the current passage.
                     </p>
                     <button
                       type="button"
                       disabled
-                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-3 py-2.5 text-sm font-medium text-[#6a5c4e]"
+                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-4 py-3 text-sm font-medium text-[#6a5c4e]"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                       title="Coming next"
                     >
