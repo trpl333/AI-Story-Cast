@@ -362,7 +362,7 @@ export default function LibraryPage() {
                   !flags
                     ? "Checking stored text…"
                     : flags.full && flags.chapter
-                      ? "Full text and chapter text saved locally."
+                      ? "Full text and chapter text saved locally — reader chapters are ready (curated or auto-detected)."
                       : flags.full
                         ? "Full text saved locally. Chapter text is not ready yet."
                         : "Book is on your shelf, but local text is missing.";
