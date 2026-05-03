@@ -313,7 +313,6 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
 
   if (configs.length === 0) {
     const detected = autoDetectChaptersFromGutenbergText(rawText, {
-      maxChapters: 5,
       bookId: searchResult.id,
     });
     const chapterBodies = detected.map((d) => ({

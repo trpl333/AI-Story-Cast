@@ -166,7 +166,7 @@ export type AutoDetectChaptersOptions = {
   bookId?: string;
 };
 
-const DEFAULT_MAX_CHAPTERS = 5;
+const DEFAULT_MAX_CHAPTERS = 50;
 
 /**
  * Detect up to `maxChapters` chapter slices from Gutenberg-style plain text.
