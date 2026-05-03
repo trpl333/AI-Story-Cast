@@ -15,7 +15,7 @@ const paperFaceBg = [
 /** Physical stacked sheet layers (offset divs) on outside fore-edge. */
 function CascadingPaperSheets(props: { side: "left" | "right" }) {
   const { side } = props;
-  const count = 9;
+  const count = 10;
   const outward = side === "left";
   return (
     <div
@@ -133,26 +133,93 @@ function BottomPageStackShadow() {
   );
 }
 
-/** Tail-edge paper lines along bottom of spread (stacked sheets). */
-function BottomPaperEdgeLines() {
-  const lines = 12;
+/** Horizontal ruled texture on outer fore-edge (paper fibers). */
+function ForeEdgeHorizontalRidges(props: { side: "left" | "right" }) {
+  const edge = props.side === "left" ? "left-0" : "right-0";
   return (
-    <div className="pointer-events-none absolute inset-x-3 bottom-0 z-[2] h-[11px] overflow-hidden sm:inset-x-5" aria-hidden>
-      {Array.from({ length: lines }).map((_, i) => {
-        const offset = i * 0.85;
-        return (
-          <div
-            key={i}
-            className="absolute left-[3%] right-[3%] rounded-[1px] bg-gradient-to-r from-[#c9b89a] via-[#f5edd8] to-[#c9b89a]"
-            style={{
-              bottom: offset,
-              height: 1.1,
-              opacity: 0.5 - i * 0.04,
-              boxShadow: "0 1px 0 rgba(0,0,0,0.12)",
-            }}
-          />
-        );
-      })}
+    <div
+      className={`pointer-events-none absolute inset-y-[16%] bottom-2 z-[2] w-[7px] sm:w-[8px] ${edge}`}
+      aria-hidden
+      style={{
+        background: [
+          "repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(62,48,32,0.12) 2px, rgba(62,48,32,0.12) 3px)",
+          props.side === "left"
+            ? "linear-gradient(90deg, rgba(255,255,255,0.2), transparent)"
+            : "linear-gradient(270deg, rgba(255,255,255,0.2), transparent)",
+        ].join(","),
+        opacity: 0.6,
+      }}
+    />
+  );
+}
+
+/** Bottom of each page column: visible sheet stack stepping toward desk. */
+function PageColumnBottomStack(props: { side: "left" | "right" }) {
+  const inset = props.side === "left" ? "left-1 right-3" : "left-3 right-1";
+  const n = 10;
+  return (
+    <div className={`pointer-events-none absolute bottom-0 z-[1] h-[13px] overflow-hidden ${inset}`} aria-hidden>
+      {Array.from({ length: n }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute left-[2%] right-[2%] rounded-[1px] bg-gradient-to-r from-[#b0a080] via-[#f8f0e0] to-[#b0a080]"
+          style={{
+            bottom: i * 0.72,
+            height: 1.2,
+            opacity: 0.5 - i * 0.038,
+            boxShadow: "0 1px 0 rgba(0,0,0,0.15)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PageStackEdges(props: { side: "left" | "right" }) {
+  return (
+    <>
+      <CascadingPaperSheets side={props.side} />
+      <PageBlockStack side={props.side} />
+      <PaperEdgeLines side={props.side} />
+      <ForeEdgeHorizontalRidges side={props.side} />
+    </>
+  );
+}
+
+/** Curved spine valley between pages (no flat black bar). */
+function CenterGutterValley() {
+  return (
+    <div className="relative z-[4] hidden w-[24px] shrink-0 overflow-visible sm:block lg:w-[32px]" aria-hidden>
+      <div
+        className="pointer-events-none absolute inset-y-0 -left-1.5 -right-1.5 rounded-[999px]"
+        style={{
+          background:
+            "radial-gradient(ellipse 42% 100% at 50% 50%, rgba(6,4,3,0.92) 0%, rgba(26,18,12,0.5) 44%, rgba(68,54,38,0.2) 72%, rgba(110,92,68,0.08) 100%)",
+          boxShadow:
+            "inset 0 0 16px rgba(0,0,0,0.75), inset 6px 0 12px rgba(0,0,0,0.22), inset -6px 0 12px rgba(0,0,0,0.22)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-6 left-0 w-[48%] rounded-l-full opacity-[0.88]"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(255,252,244,0.62) 0%, rgba(255,246,220,0.2) 58%, transparent 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-6 right-0 w-[48%] rounded-r-full opacity-[0.88]"
+        style={{
+          background:
+            "linear-gradient(270deg, rgba(255,252,244,0.62) 0%, rgba(255,246,220,0.2) 58%, transparent 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-8 left-1/2 w-[2px] -translate-x-1/2 rounded-full opacity-75"
+        style={{
+          background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 18%, rgba(0,0,0,0.68) 50%, rgba(0,0,0,0.5) 82%, transparent 100%)",
+          boxShadow: "0 0 12px rgba(0,0,0,0.5), 0 0 5px rgba(255,228,190,0.14)",
+        }}
+      />
     </div>
   );
 }
@@ -169,27 +236,26 @@ function useReaderLayout() {
     return () => mq.removeEventListener("change", fn);
   }, []);
 
-  /* Slightly fewer chars on wide layout so text fits landscape faces without internal scroll. */
-  const maxCharsPerPage = wide ? 860 : 520;
+  /* Tuned for wide landscape faces (no in-page scroll). */
+  const maxCharsPerPage = wide ? 720 : 480;
   return { wide, maxCharsPerPage };
 }
 
-/** Renders imported/seed paragraphs only. Enhanced narration text is not wired in the reader yet. */
+/** Open page parchment (labels + body). Stack edges belong on `PageBlockColumn`. */
 function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"; empty?: boolean }) {
   const { paragraphs, side, empty } = props;
   const towardGutter = side === "left" ? "right" : "left";
-  const roundMain = side === "left" ? "rounded-l-[14px] rounded-r-[5px]" : "rounded-r-[14px] rounded-l-[5px]";
+  const roundMain = side === "left" ? "rounded-l-[16px] rounded-r-[6px]" : "rounded-r-[16px] rounded-l-[6px]";
 
   const foreEdgeShadow =
     side === "left"
       ? "2px 0 0 rgba(250,244,232,0.55), 5px 0 0 rgba(210,190,160,0.38), 10px 0 0 rgba(175,150,120,0.26), 16px 0 0 rgba(0,0,0,0.08)"
       : "-2px 0 0 rgba(250,244,232,0.55), -5px 0 0 rgba(210,190,160,0.38), -10px 0 0 rgba(175,150,120,0.26), -16px 0 0 rgba(0,0,0,0.08)";
 
-  /* Stronger roll into spine: darker sweep near gutter + lift on outer edge */
   const curveShadow =
     side === "left"
-      ? "inset 0 -12px 16px rgba(55,42,28,0.07), inset 14px 0 28px rgba(55,42,28,0.07), inset -2px 0 8px rgba(255,255,255,0.12)"
-      : "inset 0 -12px 16px rgba(55,42,28,0.07), inset -14px 0 28px rgba(55,42,28,0.07), inset 2px 0 8px rgba(255,255,255,0.12)";
+      ? "inset 0 -10px 14px rgba(55,42,28,0.08), inset 18px 0 32px rgba(55,42,28,0.09), inset -2px 0 10px rgba(255,255,255,0.14)"
+      : "inset 0 -10px 14px rgba(55,42,28,0.08), inset -18px 0 32px rgba(55,42,28,0.09), inset 2px 0 10px rgba(255,255,255,0.14)";
 
   const faceShadow =
     side === "left"
@@ -198,10 +264,6 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
 
   return (
     <div className={`relative min-h-0 min-w-0 flex-1 overflow-visible ${roundMain}`}>
-      <CascadingPaperSheets side={side} />
-      <PageBlockStack side={side} />
-      <PaperEdgeLines side={side} />
-
       {!empty && (
         <div
           className={`pointer-events-none absolute inset-y-3 z-[2] ${towardGutter === "right" ? "right-0" : "left-0"} w-[6px] sm:w-[8px]`}
@@ -217,7 +279,7 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
 
       <div
         className={[
-          "relative z-[3] flex min-h-[min(22vh,180px)] flex-1 flex-col overflow-hidden sm:min-h-[min(24vh,200px)] lg:min-h-[min(25vh,215px)] xl:min-h-[min(26vh,228px)]",
+          "relative z-[3] flex min-h-[min(16vh,138px)] flex-1 flex-col overflow-hidden sm:min-h-[min(17vh,148px)] lg:min-h-[min(18vh,158px)] xl:min-h-[min(19vh,168px)]",
           roundMain,
           empty ? "items-stretch justify-stretch" : "",
         ].join(" ")}
@@ -226,7 +288,7 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
           backgroundColor: "#f0e6d6",
           boxShadow: faceShadow,
           border: "1px solid rgba(62,48,28,0.09)",
-          transform: side === "left" ? "rotateX(0.9deg)" : "rotateX(0.9deg)",
+          transform: side === "left" ? "rotateX(0.65deg)" : "rotateX(0.65deg)",
           transformOrigin: side === "left" ? "right center" : "left center",
         }}
       >
@@ -277,6 +339,32 @@ function PageFace(props: { paragraphs: ReaderParagraph[]; side: "left" | "right"
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** One side of the spread: stacked edges + bottom sheets + top page (rotates in 3D with block). */
+function PageBlockColumn(props: {
+  side: "left" | "right";
+  transform: string;
+  transformOrigin: string;
+  paragraphs: ReaderParagraph[];
+  empty?: boolean;
+}) {
+  const { side, transform, transformOrigin, paragraphs, empty } = props;
+  return (
+    <div
+      className="relative flex min-h-0 min-w-0 flex-1 basis-[50%] flex-col overflow-visible"
+      style={{ transform, transformOrigin, transformStyle: "preserve-3d" }}
+      data-book-part={side === "left" ? "page-block-left" : "page-block-right"}
+    >
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-visible" aria-hidden>
+        <PageStackEdges side={side} />
+      </div>
+      <PageColumnBottomStack side={side} />
+      <div className="relative z-[2] flex min-h-0 min-w-0 flex-1" data-book-part={side === "left" ? "left-top-page" : "right-top-page"}>
+        <PageFace paragraphs={paragraphs} side={side} empty={empty} />
       </div>
     </div>
   );
@@ -392,7 +480,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
       ? `Spread ${Math.floor(clampedLeft / 2) + 1} · pages ${clampedLeft + 1}–${clampedLeft + 2}`
       : `Page ${clampedLeft + 1} of ${pages.length}`;
 
-  const pageTurnY = wide ? "7.5deg" : "3.5deg";
+  const pageTurnY = wide ? "8deg" : "3.8deg";
 
   const brassPanel =
     "rounded-lg border-2 border-[#7a5c28]/70 bg-gradient-to-b from-[#2c2418] via-[#1a1510] to-[#120e0a] shadow-[inset_0_1px_0_rgba(255,214,160,0.12),inset_0_-2px_6px_rgba(0,0,0,0.45),0_10px_28px_rgba(0,0,0,0.55)]";
@@ -401,16 +489,20 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
     <div
       className="relative min-h-[100dvh] w-full overflow-x-hidden text-[#f0e6d4]"
       style={{
-        background:
-          "radial-gradient(ellipse 80% 50% at 50% -8%, rgba(188,140,48,0.18) 0%, transparent 42%), radial-gradient(ellipse 95% 65% at 50% 108%, rgba(0,0,0,0.58) 0%, transparent 40%), linear-gradient(168deg, #100d0a 0%, #221810 36%, #16120e 70%, #0a0806 100%)",
+        background: [
+          "radial-gradient(ellipse 72% 38% at 50% -2%, rgba(255,214,150,0.2) 0%, transparent 52%)",
+          "radial-gradient(ellipse 80% 50% at 50% -8%, rgba(188,140,48,0.14) 0%, transparent 44%)",
+          "radial-gradient(ellipse 95% 65% at 50% 108%, rgba(0,0,0,0.62) 0%, transparent 40%)",
+          "linear-gradient(168deg, #0c0907 0%, #1e1610 34%, #14100c 72%, #080605 100%)",
+        ].join(","),
       }}
     >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 68% 52% at 50% 42%, transparent 28%, rgba(0,0,0,0.52) 100%), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.022) 3px, rgba(0,0,0,0.022) 6px)",
-          opacity: 0.5,
+            "radial-gradient(ellipse 62% 48% at 50% 38%, transparent 22%, rgba(0,0,0,0.58) 100%), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.024) 3px, rgba(0,0,0,0.024) 6px)",
+          opacity: 0.55,
         }}
       />
 
@@ -438,9 +530,9 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
           <span className="font-medium text-[#f5edd8]">{chapterHeading}</span>
         </nav>
 
-        <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5 xl:gap-6">
-          {/* Main column: book dominates width */}
-          <div className="min-w-0 w-full lg:flex-1 lg:max-w-[min(100%,84rem)]">
+        <div className="mx-auto flex w-full max-w-[min(100vw-0.5rem,92rem)] flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center lg:gap-5">
+          {/* BookStage hero: ~70–80% width beside fixed companion */}
+          <div className="book-hero-column flex w-full min-w-0 flex-1 flex-col items-stretch lg:max-w-[min(100%,calc(100%-15.5rem))]">
             <header className="mb-5 text-center lg:mb-6">
               <p
                 className="text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-[#9a8470]"
@@ -464,158 +556,138 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               ) : null}
             </header>
 
-            <div className="relative mx-auto w-full max-w-[min(98vw,80rem)] px-0 sm:px-1">
+            <section
+              className="book-stage relative mx-auto flex w-full max-w-[min(98vw,78rem)] flex-col items-center px-0 sm:px-1"
+              aria-label="Open book on desk"
+            >
               <div
-                className="absolute -bottom-2 left-1/2 z-0 h-36 w-[min(100%,820px)] -translate-x-1/2 rounded-[50%] blur-2xl"
+                className="desk-surface relative w-full rounded-[1.75rem] border border-black/60 px-3 pb-10 pt-7 sm:rounded-[2rem] sm:px-6 sm:pb-12 sm:pt-9"
                 style={{
-                  background: "radial-gradient(ellipse at center, rgba(195,150,42,0.28) 0%, rgba(100,70,32,0.1) 48%, transparent 72%)",
+                  background: [
+                    "linear-gradient(192deg, rgba(52,38,28,0.96) 0%, rgba(26,18,12,0.99) 40%, rgba(12,9,7,1) 100%)",
+                    "repeating-linear-gradient(88deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 12px)",
+                    "radial-gradient(ellipse 130% 70% at 50% -5%, rgba(92,68,48,0.4) 0%, transparent 52%)",
+                  ].join(","),
+                  boxShadow:
+                    "inset 0 2px 0 rgba(255,220,190,0.05), inset 0 -18px 32px rgba(0,0,0,0.48), 0 26px 52px rgba(0,0,0,0.48)",
                 }}
-              />
-              <div
-                className="absolute bottom-0 left-1/2 z-0 h-3.5 w-[min(96%,720px)] -translate-x-1/2 rounded-sm"
-                style={{
-                  background: "linear-gradient(to bottom, #5a4330, #241a12)",
-                  boxShadow: "0 3px 0 rgba(0,0,0,0.4)",
-                }}
-              />
-              <div
-                className="absolute bottom-0 left-1/2 z-0 h-12 w-[min(92%,680px)] -translate-x-1/2 rounded-b-md"
-                style={{
-                  background: "linear-gradient(to bottom, #3a2818 0%, #16100c 55%, #080605 100%)",
-                  boxShadow: "0 18px 40px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.05)",
-                }}
-              />
-
-              <div className="relative z-[1] pb-12 pt-2" style={{ perspective: "1900px", perspectiveOrigin: "50% 24%" }}>
-                {/* Outer leather cover — wider than page block */}
+              >
                 <div
-                  className="absolute left-1/2 top-4 z-0 w-[calc(100%+18px)] max-w-[88rem] -translate-x-1/2 rounded-b-[36px] rounded-t-[22px] sm:top-5"
+                  className="pedestal-shadow pointer-events-none absolute bottom-4 left-1/2 z-0 h-44 w-[min(110%,920px)] -translate-x-1/2 rounded-[50%] blur-2xl"
                   style={{
-                    height: "calc(100% - 0.2rem)",
-                    minHeight: "min(34vh, 320px)",
-                    background:
-                      "linear-gradient(176deg, #453024 0%, #261610 22%, #120c09 50%, #2a1a12 78%, #4a3424 100%)",
-                    boxShadow:
-                      "0 0 0 1px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,255,255,0.05), inset 0 -22px 36px rgba(0,0,0,0.62), 0 32px 64px rgba(0,0,0,0.65)",
-                    transform: "translateZ(-26px) scale(1.04)",
-                    transformStyle: "preserve-3d",
+                    background: "radial-gradient(ellipse at center, rgba(205,160,48,0.26) 0%, rgba(95,65,32,0.1) 48%, transparent 74%)",
                   }}
                 />
                 <div
-                  className="pointer-events-none absolute left-[1.5%] top-7 z-[1] hidden h-[78%] w-2.5 rounded-sm opacity-75 sm:block"
+                  className="pedestal-shadow pointer-events-none absolute bottom-2 left-1/2 z-0 h-4 w-[min(98%,780px)] -translate-x-1/2 rounded-sm"
                   style={{
-                    background: "linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(55,38,26,0.55) 100%)",
-                    boxShadow: "inset -1px 0 3px rgba(0,0,0,0.55)",
+                    background: "linear-gradient(to bottom, #5c4634, #241a12)",
+                    boxShadow: "0 4px 0 rgba(0,0,0,0.45)",
                   }}
                 />
                 <div
-                  className="pointer-events-none absolute right-[1.5%] top-7 z-[1] hidden h-[78%] w-2.5 rounded-sm opacity-75 sm:block"
+                  className="pedestal-shadow pointer-events-none absolute bottom-0 left-1/2 z-0 h-[3.25rem] w-[min(94%,720px)] -translate-x-1/2 rounded-b-lg"
                   style={{
-                    background: "linear-gradient(270deg, rgba(0,0,0,0.4) 0%, rgba(55,38,26,0.55) 100%)",
-                    boxShadow: "inset 1px 0 3px rgba(0,0,0,0.55)",
+                    background: "linear-gradient(to bottom, #3a2a1e 0%, #140e0b 58%, #060403 100%)",
+                    boxShadow: "0 24px 48px rgba(0,0,0,0.78), inset 0 1px 0 rgba(255,255,255,0.05)",
                   }}
-                />
-                <div
-                  className="pointer-events-none absolute left-1/2 top-3 z-[2] h-2.5 w-[92%] max-w-[76rem] -translate-x-1/2 rounded-full opacity-45 blur-sm"
-                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,210,150,0.22), transparent)" }}
                 />
 
-                <div
-                  className="relative z-[3] mx-auto w-full overflow-visible rounded-t-[14px] rounded-b-[22px] p-[9px] sm:p-2.5"
-                  style={{
-                    background: "linear-gradient(165deg, rgba(24,16,11,0.98) 0%, rgba(10,8,6,0.99) 100%)",
-                    boxShadow:
-                      "0 0 0 1px rgba(190,150,48,0.16), 0 36px 72px rgba(0,0,0,0.55), inset 0 2px 0 rgba(255,255,255,0.035)",
-                    transformStyle: "preserve-3d",
-                  }}
-                >
+                <div className="relative z-[1] w-full pt-1" style={{ perspective: "1650px", perspectiveOrigin: "50% 12%" }}>
                   <div
-                    className="pointer-events-none absolute inset-[6px] rounded-t-[10px] rounded-b-[18px] opacity-[0.12]"
-                    style={{ boxShadow: "inset 0 0 0 1px rgba(212,170,64,0.32)" }}
-                  />
-
-                  <div
-                    className="relative overflow-visible rounded-[10px] p-1 sm:p-1.5"
+                    className="relative mx-auto w-full max-w-[min(100%,72rem)]"
                     style={{
-                      background:
-                        "linear-gradient(168deg, #322218 0%, #1a100c 46%, #241610 100%), repeating-linear-gradient(-52deg, transparent, transparent 4px, rgba(0,0,0,0.055) 4px, rgba(0,0,0,0.055) 5px)",
-                      boxShadow: "inset 0 3px 14px rgba(0,0,0,0.48), inset 0 -2px 0 rgba(255,255,255,0.025)",
+                      transform: "rotateX(4.2deg)",
+                      transformOrigin: "50% 94%",
+                      transformStyle: "preserve-3d",
                     }}
                   >
-                    <div className="relative overflow-visible" style={{ transformStyle: "preserve-3d" }}>
-                      <BottomPageStackShadow />
+                    <div
+                      className="leather-cover pointer-events-none absolute left-1/2 top-2 z-0 w-[calc(100%+22px)] max-w-[80rem] -translate-x-1/2 rounded-b-[40px] rounded-t-[24px] sm:top-3"
+                      style={{
+                        height: "calc(100% - 0.12rem)",
+                        minHeight: "min(28vh, 270px)",
+                        background:
+                          "linear-gradient(176deg, #4d3828 0%, #281810 20%, #0e0906 48%, #241610 74%, #52402c 100%)",
+                        boxShadow:
+                          "0 0 0 1px rgba(0,0,0,0.78), inset 0 3px 5px rgba(255,255,255,0.04), inset 0 -28px 42px rgba(0,0,0,0.7), 0 36px 72px rgba(0,0,0,0.7)",
+                        transform: "translateZ(-30px) scale(1.048)",
+                        transformStyle: "preserve-3d",
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute left-[1%] top-6 z-[1] hidden h-[82%] w-2.5 rounded-sm opacity-80 sm:block"
+                      style={{
+                        background: "linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(55,38,26,0.58) 100%)",
+                        boxShadow: "inset -1px 0 3px rgba(0,0,0,0.55)",
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute right-[1%] top-6 z-[1] hidden h-[82%] w-2.5 rounded-sm opacity-80 sm:block"
+                      style={{
+                        background: "linear-gradient(270deg, rgba(0,0,0,0.42) 0%, rgba(55,38,26,0.58) 100%)",
+                        boxShadow: "inset 1px 0 3px rgba(0,0,0,0.55)",
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute left-1/2 top-2 z-[2] h-3 w-[93%] max-w-[70rem] -translate-x-1/2 rounded-full opacity-50 blur-sm"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,210,150,0.24), transparent)" }}
+                    />
 
-                      <div className="relative overflow-visible pb-2" style={{ transformStyle: "preserve-3d" }}>
-                        <BottomPaperEdgeLines />
-                        <div className="relative flex flex-row items-stretch gap-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
-                        {/* Left page column: stacked block + top page */}
-                        <div
-                          className="relative min-h-0 min-w-0 flex-1 basis-[50%] overflow-visible"
-                          style={{
-                            transform: `rotateY(${pageTurnY})`,
-                            transformOrigin: "right center",
-                            transformStyle: "preserve-3d",
-                          }}
-                        >
-                          <PageFace paragraphs={leftPage} side="left" />
-                        </div>
+                    <div
+                      className="relative z-[3] mx-auto w-full overflow-visible rounded-t-[16px] rounded-b-[26px] p-[10px] sm:p-3"
+                      style={{
+                        background: "linear-gradient(165deg, rgba(22,15,10,0.99) 0%, rgba(8,6,5,1) 100%)",
+                        boxShadow:
+                          "0 0 0 1px rgba(185,145,48,0.14), 0 38px 76px rgba(0,0,0,0.58), inset 0 2px 0 rgba(255,255,255,0.03)",
+                        transformStyle: "preserve-3d",
+                      }}
+                    >
+                      <div
+                        className="pointer-events-none absolute inset-[7px] rounded-t-[12px] rounded-b-[20px] opacity-[0.11]"
+                        style={{ boxShadow: "inset 0 0 0 1px rgba(212,170,64,0.3)" }}
+                      />
 
-                        {/* Curved binding valley (not a flat black bar) */}
-                        <div className="relative z-[4] hidden w-[22px] shrink-0 overflow-visible sm:block lg:w-[30px]">
-                          <div
-                            className="pointer-events-none absolute inset-y-1 -left-1 -right-1 rounded-[999px]"
-                            style={{
-                              background:
-                                "radial-gradient(ellipse 48% 100% at 50% 50%, rgba(8,5,4,0.92) 0%, rgba(28,20,14,0.55) 42%, rgba(72,58,42,0.22) 72%, rgba(120,100,78,0.08) 100%)",
-                              boxShadow:
-                                "inset 0 0 12px rgba(0,0,0,0.65), inset 5px 0 10px rgba(0,0,0,0.25), inset -5px 0 10px rgba(0,0,0,0.25)",
-                            }}
-                          />
-                          <div
-                            className="pointer-events-none absolute inset-y-5 left-0 w-[46%] rounded-l-full opacity-90"
-                            style={{
-                              background:
-                                "linear-gradient(90deg, rgba(255,252,242,0.55) 0%, rgba(255,248,230,0.18) 55%, transparent 100%)",
-                            }}
-                          />
-                          <div
-                            className="pointer-events-none absolute inset-y-5 right-0 w-[46%] rounded-r-full opacity-90"
-                            style={{
-                              background:
-                                "linear-gradient(270deg, rgba(255,252,242,0.55) 0%, rgba(255,248,230,0.18) 55%, transparent 100%)",
-                            }}
-                          />
-                          <div
-                            className="pointer-events-none absolute inset-y-7 left-1/2 w-[2px] -translate-x-1/2 rounded-full opacity-80"
-                            style={{
-                              background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 22%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.55) 78%, transparent 100%)",
-                              boxShadow: "0 0 10px rgba(0,0,0,0.55), 0 0 4px rgba(255,230,190,0.12)",
-                            }}
-                          />
-                        </div>
-
-                        {wide ? (
-                          <div
-                            className="relative min-h-0 min-w-0 flex-1 basis-[50%] overflow-visible"
-                            style={{
-                              transform: `rotateY(-${pageTurnY})`,
-                              transformOrigin: "left center",
-                              transformStyle: "preserve-3d",
-                            }}
-                          >
-                            <PageFace paragraphs={rightPage ?? []} side="right" empty={!rightPage || rightPage.length === 0} />
+                      <div
+                        className="relative overflow-visible rounded-[12px] p-1 sm:p-1.5"
+                        style={{
+                          background:
+                            "linear-gradient(168deg, #2e2016 0%, #16100c 46%, #20140e 100%), repeating-linear-gradient(-52deg, transparent, transparent 4px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.06) 5px)",
+                          boxShadow: "inset 0 3px 16px rgba(0,0,0,0.52), inset 0 -2px 0 rgba(255,255,255,0.02)",
+                        }}
+                      >
+                        <div className="relative overflow-visible" style={{ transformStyle: "preserve-3d" }}>
+                          <BottomPageStackShadow />
+                          <div className="relative overflow-visible pb-2" style={{ transformStyle: "preserve-3d" }}>
+                            <div className="relative flex flex-row items-stretch gap-0 overflow-visible" style={{ transformStyle: "preserve-3d" }}>
+                              <PageBlockColumn
+                                side="left"
+                                transform={`rotateY(${pageTurnY})`}
+                                transformOrigin="right center"
+                                paragraphs={leftPage}
+                              />
+                              {wide ? <CenterGutterValley /> : null}
+                              {wide ? (
+                                <PageBlockColumn
+                                  side="right"
+                                  transform={`rotateY(-${pageTurnY})`}
+                                  transformOrigin="left center"
+                                  paragraphs={rightPage ?? []}
+                                  empty={!rightPage || rightPage.length === 0}
+                                />
+                              ) : null}
+                            </div>
                           </div>
-                        ) : null}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Controls: clustered under book (brass / leather desk) */}
-            <div className={`relative z-[2] mx-auto mt-3 w-full max-w-[min(98vw,80rem)] px-0 sm:px-1 ${brassPanel} p-3 sm:p-4`}>
+            {/* ControlDeck */}
+            <div className={`control-deck relative z-[2] mx-auto mt-4 w-full max-w-[min(98vw,78rem)] px-0 sm:px-1 ${brassPanel} p-3 sm:p-3.5`}>
               <div className="pointer-events-none absolute left-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
               <div className="pointer-events-none absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c9a227]/35 shadow-inner ring-1 ring-[#5c4a2a]/60" />
 
@@ -682,25 +754,24 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
               </div>
             </div>
 
-            <div className="mx-auto mt-4 w-full max-w-[min(98vw,80rem)] border-t border-[#4a3c28]/45 pt-4">
+            <div className="reader-chapter-nav mx-auto mt-4 w-full max-w-[min(98vw,78rem)] border-t border-[#4a3c28]/45 pt-4">
               <ReaderChapterNav bookId={bookId} prevSlug={prevChapterSlug} nextSlug={nextChapterSlug} layout="footer" variant="library" />
             </div>
           </div>
 
-          {/* AIStoryCast companion — compact floating card, not a full-height slab */}
           <aside
-            className="mx-auto w-full max-w-sm shrink-0 lg:mx-0 lg:mt-1 lg:w-[248px] lg:min-w-[248px] lg:max-w-[248px] lg:pt-0 xl:w-[260px] xl:min-w-[260px] xl:max-w-[260px]"
+            className="companion-panel mx-auto w-full max-w-xs shrink-0 opacity-95 lg:mx-0 lg:mt-2 lg:w-[216px] lg:min-w-[216px] lg:max-w-[216px] lg:pt-0 lg:opacity-90"
             aria-label="AIStoryCast companion"
           >
             <div
-              className={`${brassPanel} overflow-hidden rounded-2xl p-3 sm:p-3.5 lg:sticky lg:top-6`}
+              className="overflow-hidden rounded-xl border border-[#2a2218]/90 bg-gradient-to-b from-[#1a1510]/95 to-[#0d0a08]/98 p-2.5 shadow-md sm:rounded-2xl sm:p-3 lg:sticky lg:top-6"
               style={{
                 boxShadow:
-                  "inset 0 1px 0 rgba(255,214,160,0.1), 0 10px 28px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.35)",
+                  "inset 0 1px 0 rgba(255,214,160,0.06), 0 6px 18px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4)",
               }}
             >
               <p
-                className="text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-[#a89878]"
+                className="text-[0.52rem] font-semibold uppercase tracking-[0.2em] text-[#7a6a58]"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 Companion
