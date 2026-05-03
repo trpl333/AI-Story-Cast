@@ -117,7 +117,7 @@ export async function getChapterText(bookId: string, chapterSlug: string): Promi
   return row?.text;
 }
 
-/** Chapter slugs that have imported text (IndexedDB only; order not guaranteed). */
+/** Chapter slugs that have imported text (IndexedDB); sorted with {@link sortChapterSlugs}. */
 export async function listImportedChapterSlugs(bookId: string): Promise<string[]> {
   const db = await openDb();
   const slugs = await new Promise<string[]>((resolve, reject) => {
@@ -141,7 +141,7 @@ export async function listImportedChapterSlugs(bookId: string): Promise<string[]
     req.onerror = () => reject(req.error ?? new Error("listImportedChapterSlugs failed"));
   });
   db.close();
-  return out;
+  return sortChapterSlugs(slugs);
 }
 
 export async function hasFullText(bookId: string): Promise<boolean> {
