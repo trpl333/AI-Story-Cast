@@ -1,4 +1,4 @@
-import { autoDetectChaptersFromGutenbergText } from "@/lib/chapterAutoDetect";
+import { detectChaptersWithMetadata, type ChapterDetectionMeta } from "@/lib/chapterAutoDetect";
 import { extractChapterByMarkers } from "@/lib/chapterMarkers";
 import { putChapterText, putFullText, deleteAllTextsForBook } from "@/lib/importedBookDb";
 import {
@@ -239,10 +239,11 @@ async function persistImportedText(
   searchResult: SearchResult,
   rawText: string,
   chapterBodies: Array<{ slug: string; body: string; title?: string }>,
+  chapterDetectionMeta?: ChapterDetectionMeta,
 ): Promise<ImportBookSuccess | ImportBookFailure> {
   const tag = logPrefix(searchResult);
   try {
-    await putFullText(searchResult.id, rawText);
+    await putFullText(searchResult.id, rawText, chapterDetectionMeta);
     for (const ch of chapterBodies) {
       await putChapterText(searchResult.id, ch.slug, ch.body, ch.title);
     }
@@ -312,15 +313,15 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
   }
 
   if (configs.length === 0) {
-    const detected = autoDetectChaptersFromGutenbergText(rawText, {
+    const { chapters, meta } = detectChaptersWithMetadata(rawText, {
       bookId: searchResult.id,
     });
-    const chapterBodies = detected.map((d) => ({
+    const chapterBodies = chapters.map((d) => ({
       slug: d.chapterSlug,
       body: d.chapterText,
       title: d.title,
     }));
-    const outcome = await persistImportedText(searchResult, rawText, chapterBodies);
+    const outcome = await persistImportedText(searchResult, rawText, chapterBodies, meta);
     if (!outcome.ok) {
       console.error(tag, "persist failed after successful fetch");
     }
@@ -346,7 +347,12 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
     chapterBodies.push({ slug: cfg.chapterSlug, body: chapterBody, title: cfg.title });
   }
 
-  const outcome = await persistImportedText(searchResult, rawText, chapterBodies);
+  const curatedMeta: ChapterDetectionMeta = {
+    detectedChapterCount: chapterBodies.length,
+    detectionMethod: "curated",
+    confidence: "high",
+  };
+  const outcome = await persistImportedText(searchResult, rawText, chapterBodies, curatedMeta);
   if (!outcome.ok) {
     console.error(tag, "persist failed after successful fetch");
   }

@@ -1,4 +1,4 @@
-import { autoDetectChaptersFromGutenbergText } from "@/lib/chapterAutoDetect";
+import { detectChaptersWithMetadata } from "@/lib/chapterAutoDetect";
 import { deleteAllTextsForBook, putChapterText, putFullText } from "@/lib/importedBookDb";
 import { UPLOADED_FILE_SOURCE_LABEL, type ImportedShelfBook } from "@/lib/importedBookStorage";
 
@@ -54,12 +54,9 @@ export async function persistUploadedTxtBook(params: {
     stem.length > 0 ? stem.replace(/_/g, " ") : slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   try {
-    await putFullText(bookId, rawText);
-    const detected = autoDetectChaptersFromGutenbergText(rawText, { bookId });
-    const chapterBodies =
-      detected.length > 0
-        ? detected.map((d) => ({ slug: d.chapterSlug, body: d.chapterText, title: d.title }))
-        : [{ slug: "chapter-1", body: trimmed, title: "Full text" }];
+    const { chapters, meta } = detectChaptersWithMetadata(rawText, { bookId });
+    await putFullText(bookId, rawText, meta);
+    const chapterBodies = chapters.map((d) => ({ slug: d.chapterSlug, body: d.chapterText, title: d.title }));
 
     for (const ch of chapterBodies) {
       await putChapterText(bookId, ch.slug, ch.body, ch.title);

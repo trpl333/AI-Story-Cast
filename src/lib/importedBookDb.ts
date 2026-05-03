@@ -13,12 +13,19 @@ function legacyLocalChapterKey(bookId: string, chapterSlug: string): string {
   return `aistorycast-book-chapter-${bookId}-${chapterSlug}`;
 }
 
+import type { ChapterDetectionMeta } from "@/lib/chapterAutoDetect";
+
 const DB_NAME = "aistorycast-imports-v1";
 const DB_VERSION = 1;
 const STORE_FULL = "fullText";
 const STORE_CHAPTER = "chapterText";
 
-type FullTextRow = { bookId: string; text: string };
+export type FullTextRow = {
+  bookId: string;
+  text: string;
+  /** Optional import-time snapshot; omitted on older rows. */
+  chapterDetectionMeta?: ChapterDetectionMeta;
+};
 export type ChapterTextRow = { id: string; bookId: string; chapterSlug: string; text: string; title?: string };
 
 function chapterRowId(bookId: string, chapterSlug: string): string {
@@ -57,13 +64,15 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-export async function putFullText(bookId: string, text: string): Promise<void> {
+export async function putFullText(bookId: string, text: string, chapterDetectionMeta?: ChapterDetectionMeta): Promise<void> {
   const db = await openDb();
+  const row: FullTextRow = { bookId, text };
+  if (chapterDetectionMeta) row.chapterDetectionMeta = chapterDetectionMeta;
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_FULL, "readwrite");
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error("putFullText transaction failed"));
-    tx.objectStore(STORE_FULL).put({ bookId, text } satisfies FullTextRow);
+    tx.objectStore(STORE_FULL).put(row);
   });
   db.close();
 }
@@ -87,15 +96,20 @@ export async function putChapterText(
   db.close();
 }
 
-export async function getFullText(bookId: string): Promise<string | undefined> {
+export async function getFullTextRecord(bookId: string): Promise<FullTextRow | undefined> {
   const db = await openDb();
   const row = await new Promise<FullTextRow | undefined>((resolve, reject) => {
     const tx = db.transaction(STORE_FULL, "readonly");
     const req = tx.objectStore(STORE_FULL).get(bookId);
     req.onsuccess = () => resolve(req.result as FullTextRow | undefined);
-    req.onerror = () => reject(req.error ?? new Error("getFullText failed"));
+    req.onerror = () => reject(req.error ?? new Error("getFullTextRecord failed"));
   });
   db.close();
+  return row;
+}
+
+export async function getFullText(bookId: string): Promise<string | undefined> {
+  const row = await getFullTextRecord(bookId);
   return row?.text;
 }
 

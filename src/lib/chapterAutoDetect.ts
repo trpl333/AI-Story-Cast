@@ -1,12 +1,35 @@
 /**
- * Heuristic chapter boundary detection for plain Gutenberg-style text when no
- * curated markers exist (live-search imports).
+ * Tiered chapter boundary detection for plain Gutenberg-style text when no
+ * curated `chapterImports` exist (live search, uploads).
+ *
+ * Strategy (pattern-based only — no book title, author, or Gutenberg-ID checks):
+ * 1. Same-line CHAPTER / Chapter + Roman or Arabic numeral
+ * 2. CHAPTER / Chapter + subtitle on following line(s)
+ * 3. STAVE (A Christmas Carol–style)
+ * 4. Standalone Roman numeral line + title line
+ * 5. Standalone Arabic 1–99 + title line
+ * 6. PART / BOOK / VOLUME: section context only (never standalone chapters); a matching
+ *    section line just above a real heading is prepended to that chapter’s title.
+ *
+ * When no headings qualify, {@link detectChaptersWithMetadata} returns a
+ * single "Full text" slice after the Project Gutenberg START marker when present.
  */
 
 export type AutoDetectedChapter = {
   chapterSlug: string;
   title: string;
   chapterText: string;
+};
+
+/** Persisted on full-text IDB rows and returned from {@link detectChaptersWithMetadata}. */
+export type ChapterDetectionMethod = "curated" | "heuristic" | "fallback-full-text";
+
+export type ChapterDetectionConfidence = "high" | "medium" | "low";
+
+export type ChapterDetectionMeta = {
+  detectedChapterCount: number;
+  detectionMethod: ChapterDetectionMethod;
+  confidence: ChapterDetectionConfidence;
 };
 
 type HeadingMatch = {
@@ -63,12 +86,22 @@ function parseRomanNumeralToken(token: string): number | null {
 }
 
 /** Ignore headings before this index (Gutenberg boilerplate / TOC before body). */
-function findContentStartAfterGutenbergMarker(text: string): number {
+export function findContentStartAfterGutenbergMarker(text: string): number {
   const marker =
     /(?:^|\r?\n)\s*\*{3}\s*START OF (?:THE PROJECT GUTENBERG EBOOK|THIS PROJECT GUTENBERG EBOOK)[^\n]*\r?\n/i;
   const m = marker.exec(text);
   if (m) return m.index + m[0].length;
   return 0;
+}
+
+/**
+ * Body slice for reader fallback: text after the Gutenberg START marker when
+ * present, else full normalized text (trimmed).
+ */
+export function extractDefaultReadableSlice(normalizedText: string): string {
+  const start = findContentStartAfterGutenbergMarker(normalizedText);
+  const body = normalizedText.slice(start).trim();
+  return body.length > 0 ? body : normalizedText.trim();
 }
 
 /** Minimum prose (after heading block) before the next heading or EOF. */
@@ -77,13 +110,39 @@ const MIN_CHAPTER_BODY_CHARS = 700;
 /** Minimum distance between consecutive heading *starts* (TOC lines sit closer). */
 const MIN_HEADING_START_GAP = 700;
 
-const HEADING_PATTERNS: readonly HeadingPattern[] = [
-  // Same-line: CHAPTER I / CHAPTER I. / CHAPTER II.
+/**
+ * A line that declares a major section (PART / BOOK / VOLUME + ordinal), optionally with
+ * an em-dash or hyphen title tail — generic in public-domain texts, not a chapter slug.
+ */
+const SECTION_HEADING_LINE =
+  /^\s*(PART|BOOK|VOLUME)\s+(?:(?:THE\s+)?(?:FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY|THIRTY|FORTY|[IVXLC]{1,8}|\d{1,3}))(?:\s*[—–\-]{1,3}\s*[^\n]+)?\s*$/i;
+
+/** How far above a chapter heading we scan for a section line (blank lines allowed between). */
+const SECTION_CONTEXT_LOOKBACK_CHARS = 1400;
+
+function findSectionContextLineAbove(text: string, chapterHeadingStart: number): string | null {
+  const from = Math.max(0, chapterHeadingStart - SECTION_CONTEXT_LOOKBACK_CHARS);
+  const chunk = text.slice(from, chapterHeadingStart);
+  const lines = chunk.split("\n");
+  let i = lines.length - 1;
+  while (i >= 0 && lines[i].trim() === "") i--;
+  if (i < 0) return null;
+  const candidate = lines[i].trim();
+  if (candidate.length < 6 || candidate.length > 220) return null;
+  if (!SECTION_HEADING_LINE.test(candidate)) return null;
+  return candidate.replace(/\s+/g, " ").trim();
+}
+
+/** Same-line: CHAPTER I / CHAPTER 1 / Chapter I (generic class). */
+const CHAPTER_HEADING_SAME_LINE: readonly HeadingPattern[] = [
   { pattern: /^\s*(CHAPTER\s+[IVXLC]+)\s*\.?\s*$/gim, titleGroup: 1 },
   { pattern: /^\s*(CHAPTER\s+\d+)\s*\.?\s*$/gim, titleGroup: 1 },
   { pattern: /^\s*(Chapter\s+[IVXLC]+)\s*\.?\s*$/gim, titleGroup: 1 },
   { pattern: /^\s*(Chapter\s+\d+)\s*\.?\s*$/gim, titleGroup: 1 },
-  // CHAPTER I + subtitle on next line(s), e.g. Scarlet Pimpernel "THE FISHERMAN'S COTTAGE"
+];
+
+/** CHAPTER / Chapter + subtitle on the following line(s) (generic class). */
+const CHAPTER_HEADING_WITH_SUBTITLE: readonly HeadingPattern[] = [
   {
     pattern:
       /^\s*(CHAPTER\s+[IVXLC]+)\s*\.?\s*(?:\r?\n){1,3}(?!\s*CHAPTER\s)([^\n]{2,200})\s*\r?\n/gim,
@@ -96,12 +155,18 @@ const HEADING_PATTERNS: readonly HeadingPattern[] = [
     titleGroup: 1,
     subtitleGroup: 2,
   },
+];
+
+/** STAVE I / STAVE ONE, etc. (generic class). */
+const STAVE_HEADING: readonly HeadingPattern[] = [
   {
     pattern: /^\s*(STAVE\s+(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|[IVXLC]+|\d+))\s*\.?\s*$/gim,
     titleGroup: 1,
   },
-  // Treasure Island style: Roman token alone on a line, chapter title on the next line.
-  // (Avoid nested-quantifier Roman regex — it can match empty / mis-number captures / ReDoS.)
+];
+
+/** Standalone Roman line + title line (generic class; validated in matchOk). */
+const STANDALONE_ROMAN_TITLE_LINE: readonly HeadingPattern[] = [
   {
     pattern:
       /(?:^|\r?\n)\s*([MDCLXVI]{1,8})\s*\r?\n(?:\r?\n){0,2}[ \t]*(\S[^\n]{3,220})\s*\r?\n/gi,
@@ -113,18 +178,28 @@ const HEADING_PATTERNS: readonly HeadingPattern[] = [
       if (!roman || !sub) return false;
       const n = parseRomanNumeralToken(roman);
       if (n == null || n > 199) return false;
-      // Next line is another lone Roman (TOC continuation), not a title.
       if (/^[MDCLXVI]{1,8}$/i.test(sub)) return false;
       return true;
     },
   },
-  // Arabic 1–99 alone on a line, title on the next line (some Gutenberg editions).
+];
+
+/** Standalone Arabic 1–99 + title line (generic class). */
+const STANDALONE_ARABIC_TITLE_LINE: readonly HeadingPattern[] = [
   {
     pattern:
       /(?:^|\r?\n)\s*((?:[1-9]\d?))\s*\r?\n(?:\r?\n){0,2}[ \t]*(\S[^\n]{3,220})\s*\r?\n/g,
     titleGroup: 1,
     subtitleGroup: 2,
   },
+];
+
+const HEADING_PATTERNS: readonly HeadingPattern[] = [
+  ...CHAPTER_HEADING_SAME_LINE,
+  ...CHAPTER_HEADING_WITH_SUBTITLE,
+  ...STAVE_HEADING,
+  ...STANDALONE_ROMAN_TITLE_LINE,
+  ...STANDALONE_ARABIC_TITLE_LINE,
 ];
 
 function normalizeRawText(rawText: string): string {
@@ -174,11 +249,7 @@ function bodyCharCount(text: string, from: number, to: number): number {
 
 const REJECTION_LOG_CAP = 14;
 
-function filterRealChapterStarts(
-  text: string,
-  matches: HeadingMatch[],
-  bookId: string,
-): HeadingMatch[] {
+function filterRealChapterStarts(text: string, matches: HeadingMatch[], bookId: string): HeadingMatch[] {
   const out: HeadingMatch[] = [];
   let rejectLogged = 0;
 
@@ -233,25 +304,29 @@ export type AutoDetectChaptersOptions = {
 
 const DEFAULT_MAX_CHAPTERS = 50;
 
+function inferHeuristicConfidence(chapterCount: number): ChapterDetectionConfidence {
+  if (chapterCount >= 8) return "high";
+  if (chapterCount >= 3) return "medium";
+  return "low";
+}
+
 /**
- * Detect up to `maxChapters` chapter slices from Gutenberg-style plain text.
- * Prefers headings after the Project Gutenberg START marker; returns [] when none qualify.
+ * Heuristic-only pass: up to `maxChapters` chapter slices, or [] when none qualify
+ * (no fallback slice).
  */
-export function autoDetectChaptersFromGutenbergText(
-  rawText: string,
-  options: AutoDetectChaptersOptions | number = {},
-): AutoDetectedChapter[] {
-  const opts: AutoDetectChaptersOptions = typeof options === "number" ? { maxChapters: options } : options;
+function runHeuristicChapterDetection(
+  text: string,
+  opts: AutoDetectChaptersOptions,
+): { chapters: AutoDetectedChapter[]; patternHitsPreDedupe: number; contentStart: number } {
   const maxChapters = opts.maxChapters ?? DEFAULT_MAX_CHAPTERS;
   const bookId = opts.bookId ?? "";
   const idLabel = bookId || "(unknown)";
 
-  const text = normalizeRawText(rawText);
   if (text.length < 2000) {
     console.debug(
-      `[chapterAutoDetect] ${idLabel}: text_too_short (len=${text.length}), detected 0 chapters`,
+      `[chapterAutoDetect] ${idLabel}: detectionMethod=heuristic chapterCount=0 reason=text_too_short (len=${text.length})`,
     );
-    return [];
+    return { chapters: [], patternHitsPreDedupe: 0, contentStart: findContentStartAfterGutenbergMarker(text) };
   }
 
   const contentStart = findContentStartAfterGutenbergMarker(text);
@@ -261,15 +336,17 @@ export function autoDetectChaptersFromGutenbergText(
     `[chapterAutoDetect] ${idLabel}: total_raw_heading_matches=${patternHitsPreDedupe} after_dedupe=${allRaw.length} contentStart=${contentStart}`,
   );
 
-  const preview = allRaw.slice(0, 10).map((m, i) => `[${i}] start=${m.startIndex} title="${m.title.replace(/"/g, "'")}"`);
+  const preview = allRaw
+    .slice(0, 10)
+    .map((m, i) => `[${i}] start=${m.startIndex} title="${m.title.replace(/"/g, "'")}"`);
   console.debug(`[chapterAutoDetect] ${idLabel}: raw_headings_preview (first 10): ${preview.join(" | ")}`);
 
   const all = allRaw.filter((m) => m.startIndex >= contentStart);
   if (all.length === 0) {
     console.debug(
-      `[chapterAutoDetect] ${idLabel}: no_headings_after_gutenberg_marker (post_marker=0, deduped=${allRaw.length}, pattern_hits_pre_dedupe=${patternHitsPreDedupe}), detected 0 chapters`,
+      `[chapterAutoDetect] ${idLabel}: detectionMethod=heuristic chapterCount=0 reason=no_headings_after_marker (deduped=${allRaw.length}, pattern_hits=${patternHitsPreDedupe})`,
     );
-    return [];
+    return { chapters: [], patternHitsPreDedupe, contentStart };
   }
 
   const starts = filterRealChapterStarts(text, all, idLabel);
@@ -278,8 +355,10 @@ export function autoDetectChaptersFromGutenbergText(
   );
 
   if (starts.length === 0) {
-    console.debug(`[chapterAutoDetect] detected 0 chapters for ${idLabel}`);
-    return [];
+    console.debug(
+      `[chapterAutoDetect] ${idLabel}: detectionMethod=heuristic chapterCount=0 reason=no_headings_passed_filters`,
+    );
+    return { chapters: [], patternHitsPreDedupe, contentStart };
   }
 
   const limit = Math.min(maxChapters, starts.length);
@@ -297,6 +376,10 @@ export function autoDetectChaptersFromGutenbergText(
     }
 
     let title = starts[i].title.replace(/\s+/g, " ").trim();
+    const sectionLine = findSectionContextLineAbove(text, start);
+    if (sectionLine) {
+      title = `${sectionLine} — ${title}`.replace(/\s+/g, " ").trim();
+    }
     if (title.length > 120) title = `${title.slice(0, 117)}…`;
 
     result.push({
@@ -306,6 +389,80 @@ export function autoDetectChaptersFromGutenbergText(
     });
   }
 
-  console.debug(`[chapterAutoDetect] detected ${result.length} chapters for ${idLabel}`);
-  return result;
+  const confidence = inferHeuristicConfidence(result.length);
+  console.debug(
+    `[chapterAutoDetect] ${idLabel}: detectionMethod=heuristic chapterCount=${result.length} confidence=${confidence}`,
+  );
+  return { chapters: result, patternHitsPreDedupe, contentStart };
+}
+
+/**
+ * Detect chapters plus metadata. When the heuristic finds no qualifying chapters
+ * but the text has readable body, returns a single chapter titled "Full text"
+ * (slice after the Gutenberg START marker when present).
+ */
+export function detectChaptersWithMetadata(
+  rawText: string,
+  options: AutoDetectChaptersOptions | number = {},
+): { chapters: AutoDetectedChapter[]; meta: ChapterDetectionMeta } {
+  const opts: AutoDetectChaptersOptions = typeof options === "number" ? { maxChapters: options } : options;
+  const bookId = opts.bookId ?? "";
+  const idLabel = bookId || "(unknown)";
+
+  const text = normalizeRawText(rawText);
+  if (text.trim().length === 0) {
+    console.debug(`[chapterAutoDetect] ${idLabel}: detectionMethod=fallback-full-text chapterCount=0 reason=empty_text`);
+    return {
+      chapters: [],
+      meta: { detectedChapterCount: 0, detectionMethod: "fallback-full-text", confidence: "low" },
+    };
+  }
+
+  const { chapters: heuristicChapters } = runHeuristicChapterDetection(text, opts);
+
+  if (heuristicChapters.length > 0) {
+    const meta: ChapterDetectionMeta = {
+      detectedChapterCount: heuristicChapters.length,
+      detectionMethod: "heuristic",
+      confidence: inferHeuristicConfidence(heuristicChapters.length),
+    };
+    return { chapters: heuristicChapters, meta };
+  }
+
+  const body = extractDefaultReadableSlice(text);
+  if (body.length === 0) {
+    console.debug(
+      `[chapterAutoDetect] ${idLabel}: detectionMethod=fallback-full-text chapterCount=0 reason=no_readable_body`,
+    );
+    return {
+      chapters: [],
+      meta: { detectedChapterCount: 0, detectionMethod: "fallback-full-text", confidence: "low" },
+    };
+  }
+
+  const meta: ChapterDetectionMeta = {
+    detectedChapterCount: 1,
+    detectionMethod: "fallback-full-text",
+    confidence: "low",
+  };
+  console.debug(
+    `[chapterAutoDetect] ${idLabel}: detectionMethod=fallback-full-text chapterCount=1 bodyLen=${body.length} confidence=low`,
+  );
+  return {
+    chapters: [{ chapterSlug: "chapter-1", title: "Full text", chapterText: body }],
+    meta,
+  };
+}
+
+/**
+ * Heuristic-only API (no single-chapter fallback). Prefer
+ * {@link detectChaptersWithMetadata} for imports that must always be readable.
+ */
+export function autoDetectChaptersFromGutenbergText(
+  rawText: string,
+  options: AutoDetectChaptersOptions | number = {},
+): AutoDetectedChapter[] {
+  const opts: AutoDetectChaptersOptions = typeof options === "number" ? { maxChapters: options } : options;
+  const text = normalizeRawText(rawText);
+  return runHeuristicChapterDetection(text, opts).chapters;
 }
