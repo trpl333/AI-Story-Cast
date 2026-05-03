@@ -312,17 +312,15 @@ export async function importBook(searchResult: SearchResult): Promise<ImportBook
   }
 
   if (configs.length === 0) {
-    const detected = autoDetectChaptersFromGutenbergText(rawText, 3);
+    const detected = autoDetectChaptersFromGutenbergText(rawText, {
+      maxChapters: 5,
+      bookId: searchResult.id,
+    });
     const chapterBodies = detected.map((d) => ({
       slug: d.chapterSlug,
       body: d.chapterText,
       title: d.title,
     }));
-    if (chapterBodies.length > 0) {
-      console.debug(tag, "auto-detected", chapterBodies.length, "chapter(s) from Gutenberg headings");
-    } else {
-      console.debug(tag, "no chapter headings auto-detected; full text only");
-    }
     const outcome = await persistImportedText(searchResult, rawText, chapterBodies);
     if (!outcome.ok) {
       console.error(tag, "persist failed after successful fetch");
