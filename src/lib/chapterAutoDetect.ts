@@ -21,7 +21,46 @@ type HeadingPattern = {
   titleGroup: number;
   /** Optional second capture (e.g. subtitle on the following line). */
   subtitleGroup?: number;
+  /** Extra guard after a regex match (e.g. validate Roman numeral token). */
+  matchOk?: (m: RegExpMatchArray) => boolean;
 };
+
+/** Parse MDCLXVI token to a positive integer, or null if not a valid Roman numeral. */
+function parseRomanNumeralToken(token: string): number | null {
+  const t = token.trim().toUpperCase();
+  if (!t || !/^[MDCLXVI]+$/.test(t)) return null;
+  let i = 0;
+  let total = 0;
+  const pairs: readonly (readonly [string, number])[] = [
+    ["M", 1000],
+    ["CM", 900],
+    ["D", 500],
+    ["CD", 400],
+    ["C", 100],
+    ["XC", 90],
+    ["L", 50],
+    ["XL", 40],
+    ["X", 10],
+    ["IX", 9],
+    ["V", 5],
+    ["IV", 4],
+    ["I", 1],
+  ] as const;
+  while (i < t.length) {
+    let step = 0;
+    for (const [sym, val] of pairs) {
+      if (t.startsWith(sym, i)) {
+        total += val;
+        step = sym.length;
+        break;
+      }
+    }
+    if (step === 0) return null;
+    i += step;
+  }
+  if (total < 1 || total > 3999) return null;
+  return total;
+}
 
 /** Ignore headings before this index (Gutenberg boilerplate / TOC before body). */
 function findContentStartAfterGutenbergMarker(text: string): number {
@@ -61,6 +100,31 @@ const HEADING_PATTERNS: readonly HeadingPattern[] = [
     pattern: /^\s*(STAVE\s+(?:ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|[IVXLC]+|\d+))\s*\.?\s*$/gim,
     titleGroup: 1,
   },
+  // Treasure Island style: Roman token alone on a line, chapter title on the next line.
+  // (Avoid nested-quantifier Roman regex — it can match empty / mis-number captures / ReDoS.)
+  {
+    pattern:
+      /(?:^|\r?\n)\s*([MDCLXVI]{1,8})\s*\r?\n(?:\r?\n){0,2}[ \t]*(\S[^\n]{3,220})\s*\r?\n/gi,
+    titleGroup: 1,
+    subtitleGroup: 2,
+    matchOk: (m) => {
+      const roman = typeof m[1] === "string" ? m[1].trim() : "";
+      const sub = typeof m[2] === "string" ? m[2].trim() : "";
+      if (!roman || !sub) return false;
+      const n = parseRomanNumeralToken(roman);
+      if (n == null || n > 199) return false;
+      // Next line is another lone Roman (TOC continuation), not a title.
+      if (/^[MDCLXVI]{1,8}$/i.test(sub)) return false;
+      return true;
+    },
+  },
+  // Arabic 1–99 alone on a line, title on the next line (some Gutenberg editions).
+  {
+    pattern:
+      /(?:^|\r?\n)\s*((?:[1-9]\d?))\s*\r?\n(?:\r?\n){0,2}[ \t]*(\S[^\n]{3,220})\s*\r?\n/g,
+    titleGroup: 1,
+    subtitleGroup: 2,
+  },
 ];
 
 function normalizeRawText(rawText: string): string {
@@ -81,6 +145,7 @@ function collectHeadingMatches(text: string): { deduped: HeadingMatch[]; pattern
   for (const spec of HEADING_PATTERNS) {
     const re = new RegExp(spec.pattern.source, spec.pattern.flags);
     for (const m of text.matchAll(re)) {
+      if (spec.matchOk && !spec.matchOk(m)) continue;
       const title = buildTitleFromMatch(m, spec);
       if (!title) continue;
       const startIndex = m.index ?? 0;
