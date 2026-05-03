@@ -253,6 +253,8 @@ export type ImmersiveBookReaderProps = {
   nextChapterSlug: string | null;
 };
 
+type CompanionTab = "scene" | "analysis" | "secrets";
+
 export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
   const { bookId, chapterSlug, bookTitle, author, chapterHeading, paragraphs, prevChapterSlug, nextChapterSlug } =
     props;
@@ -265,6 +267,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
   const [sceneFilename, setSceneFilename] = useState<string | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [sceneLoading, setSceneLoading] = useState(false);
+  const [companionTab, setCompanionTab] = useState<CompanionTab>("scene");
   const sceneBlobUrlRef = useRef<string | null>(null);
 
   const lastSpreadStart = pages.length <= 1 ? 0 : Math.floor((pages.length - 1) / 2) * 2;
@@ -286,6 +289,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
     replaceSceneUrl(null);
     setSceneFilename(null);
     setSceneError(null);
+    setCompanionTab("scene");
   }, [bookId, chapterSlug, replaceSceneUrl]);
 
   useEffect(() => {
@@ -589,7 +593,7 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       type="button"
                       onClick={goPrevPage}
                       disabled={!canPrevPage}
-                      className="rounded-md border border-[#8a6a2a]/75 bg-gradient-to-b from-[#2e2418] to-[#1a140f] px-3.5 py-2 text-sm font-medium text-[#f0e6d4] shadow-sm transition-colors hover:border-[#c9a227]/55 disabled:cursor-not-allowed disabled:opacity-35"
+                      className="rounded-md border border-[#8a6a2a]/75 bg-gradient-to-b from-[#2e2418] to-[#1a140f] px-3.5 py-2 text-sm font-medium text-[#f0e6d4] shadow-sm transition-colors hover:border-[#c9a227]/55 disabled:cursor-not-allowed disabled:opacity-40"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                     >
                       Previous page
@@ -598,22 +602,13 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                       type="button"
                       onClick={goNextPage}
                       disabled={!canNextPage}
-                      className="rounded-md border border-[#8a6a2a]/75 bg-gradient-to-b from-[#2e2418] to-[#1a140f] px-3.5 py-2 text-sm font-medium text-[#f0e6d4] shadow-sm transition-colors hover:border-[#c9a227]/55 disabled:cursor-not-allowed disabled:opacity-35"
+                      className="rounded-md border border-[#8a6a2a]/75 bg-gradient-to-b from-[#2e2418] to-[#1a140f] px-3.5 py-2 text-sm font-medium text-[#f0e6d4] shadow-sm transition-colors hover:border-[#c9a227]/55 disabled:cursor-not-allowed disabled:opacity-40"
                       style={{ fontFamily: "'Inter', sans-serif" }}
                     >
                       Next page
                     </button>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={onShowScene}
-                      disabled={sceneLoading || spreadPlainText.trim().length === 0}
-                      className="rounded-md border border-[#9a7418]/85 bg-gradient-to-b from-[#6b4e1c] to-[#342210] px-3.5 py-2 text-sm font-semibold text-[#fdf6e9] shadow-md transition-colors hover:from-[#7a5a22] hover:to-[#403018] disabled:cursor-not-allowed disabled:opacity-40"
-                      style={{ fontFamily: "'Inter', sans-serif" }}
-                    >
-                      {sceneLoading ? "Generating…" : "Show this scene"}
-                    </button>
                     <button
                       type="button"
                       disabled
@@ -625,12 +620,6 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
                     </button>
                   </div>
                 </div>
-
-                {sceneError ? (
-                  <p className="text-center text-sm text-amber-200/90 sm:text-left" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {sceneError}
-                  </p>
-                ) : null}
               </div>
             </div>
 
@@ -639,37 +628,157 @@ export function ImmersiveBookReader(props: ImmersiveBookReaderProps) {
             </div>
           </div>
 
-          {/* Scene: no fixed giant column — compact when empty, card when image */}
+          {/* AIStoryCast companion: scene, analysis, secrets (narration tools later) */}
           <aside
-            className={`mx-auto w-full shrink-0 lg:mx-0 lg:mt-0 ${sceneUrl ? "lg:max-w-[min(280px,26vw)] lg:pt-2" : "lg:max-w-[13rem] lg:pt-2"}`}
+            className="mx-auto w-full max-w-md shrink-0 lg:mx-0 lg:mt-0 lg:w-[min(100%,300px)] lg:max-w-[min(300px,28vw)] lg:pt-2"
+            aria-label="AIStoryCast companion"
           >
-            {sceneUrl ? (
-              <div
-                className={`${brassPanel} p-3 shadow-2xl lg:sticky lg:top-5`}
-                style={{ boxShadow: "inset 0 1px 0 rgba(255,214,160,0.1), 0 16px 40px rgba(0,0,0,0.5)" }}
+            <div
+              className={`${brassPanel} overflow-hidden p-3 shadow-2xl sm:p-3.5 lg:sticky lg:top-5`}
+              style={{ boxShadow: "inset 0 1px 0 rgba(255,214,160,0.1), 0 16px 40px rgba(0,0,0,0.5)" }}
+            >
+              <p
+                className="text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-[#a89878]"
+                style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[#b9a080]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Scene
-                </p>
-                <div className="mt-2 overflow-hidden rounded-md border border-[#6b5428]/65 bg-[#0c0907] p-1 shadow-inner">
-                  <img src={sceneUrl} alt="Illustration for this spread" className="w-full rounded-sm object-cover shadow-md" />
-                </div>
-                {sceneFilename ? (
-                  <p className="mt-2 truncate text-[0.65rem] text-[#8a7a66]" style={{ fontFamily: "'Inter', sans-serif" }} title={sceneFilename}>
-                    {sceneFilename}
-                  </p>
+                Companion
+              </p>
+              <div
+                role="tablist"
+                aria-label="Companion sections"
+                className="mt-2.5 flex gap-0.5 rounded-md border border-[#4a3820]/70 bg-[#0f0c09]/90 p-0.5 shadow-inner"
+              >
+                {(
+                  [
+                    ["scene", "Scene"],
+                    ["analysis", "Analysis"],
+                    ["secrets", "Secrets"],
+                  ] as const
+                ).map(([id, label]) => {
+                  const selected = companionTab === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      aria-controls={`companion-panel-${id}`}
+                      id={`companion-tab-${id}`}
+                      tabIndex={0}
+                      onClick={() => setCompanionTab(id)}
+                      className={[
+                        "min-w-0 flex-1 rounded px-1.5 py-1.5 text-[0.62rem] font-semibold uppercase tracking-wide transition-colors sm:text-[0.65rem]",
+                        selected
+                          ? "bg-[#b8921f] text-[#1a1308] shadow-sm"
+                          : "bg-transparent text-[#9a8a78] hover:bg-[#1f1812]/90 hover:text-[#d4c4a8]",
+                      ].join(" ")}
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 min-h-0">
+                {companionTab === "scene" ? (
+                  <div
+                    role="tabpanel"
+                    id="companion-panel-scene"
+                    aria-labelledby="companion-tab-scene"
+                    className="flex flex-col gap-3"
+                  >
+                    {sceneLoading ? (
+                      <p className="text-[0.78rem] leading-relaxed text-[#c4b4a0]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        Generating illustration…
+                      </p>
+                    ) : null}
+                    {sceneError ? (
+                      <p className="text-[0.78rem] leading-relaxed text-amber-200/95" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {sceneError}
+                      </p>
+                    ) : null}
+                    {sceneUrl ? (
+                      <>
+                        <div className="overflow-hidden rounded-md border border-[#6b5428]/65 bg-[#0c0907] p-1 shadow-inner">
+                          <img
+                            src={sceneUrl}
+                            alt="Illustration for this spread"
+                            className="w-full rounded-sm object-cover shadow-md"
+                          />
+                        </div>
+                        {sceneFilename ? (
+                          <p
+                            className="truncate text-[0.65rem] text-[#8a7a66]"
+                            style={{ fontFamily: "'Inter', sans-serif" }}
+                            title={sceneFilename}
+                          >
+                            {sceneFilename}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : !sceneLoading && !sceneError ? (
+                      <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                        Generate an illustration from the current open pages.
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={onShowScene}
+                      disabled={sceneLoading || spreadPlainText.trim().length === 0}
+                      className="w-full rounded-md border border-[#9a7418]/85 bg-gradient-to-b from-[#6b4e1c] to-[#342210] px-3 py-2.5 text-sm font-semibold text-[#fdf6e9] shadow-md transition-colors hover:from-[#7a5a22] hover:to-[#403018] disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                    >
+                      {sceneLoading ? "Generating…" : "Show this scene"}
+                    </button>
+                  </div>
+                ) : null}
+
+                {companionTab === "analysis" ? (
+                  <div
+                    role="tabpanel"
+                    id="companion-panel-analysis"
+                    aria-labelledby="companion-tab-analysis"
+                    className="flex flex-col gap-3"
+                  >
+                    <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                      Analysis coming next. AIStoryCast will explain this page, summarize the action, and highlight important context.
+                    </p>
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-3 py-2.5 text-sm font-medium text-[#6a5c4e]"
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                      title="Coming next"
+                    >
+                      Analyze this page
+                    </button>
+                  </div>
+                ) : null}
+
+                {companionTab === "secrets" ? (
+                  <div
+                    role="tabpanel"
+                    id="companion-panel-secrets"
+                    aria-labelledby="companion-tab-secrets"
+                    className="flex flex-col gap-3"
+                  >
+                    <p className="text-[0.78rem] leading-relaxed text-[#b0a090]" style={{ fontFamily: "'Lora', serif" }}>
+                      Secrets coming next. This will reveal symbolism, foreshadowing, literary references, and hidden details in the current passage.
+                    </p>
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full cursor-not-allowed rounded-md border border-[#5c4a2a]/50 bg-[#120e0c]/85 px-3 py-2.5 text-sm font-medium text-[#6a5c4e]"
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                      title="Coming next"
+                    >
+                      Reveal secrets
+                    </button>
+                  </div>
                 ) : null}
               </div>
-            ) : (
-              <div
-                className="rounded-md border border-[#5c4a2a]/40 bg-[#1a1510]/85 px-3 py-2.5 text-center shadow-md lg:text-left"
-                style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
-              >
-                <p className="text-[0.68rem] leading-snug text-[#9a8a78]" style={{ fontFamily: "'Lora', serif" }}>
-                  <span className="font-semibold text-[#dcccb0]">Show this scene</span> below adds an illustration here.
-                </p>
-              </div>
-            )}
+            </div>
           </aside>
         </div>
       </div>
